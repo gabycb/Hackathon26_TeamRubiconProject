@@ -237,7 +237,9 @@ def load_census(state_fips: str, county_codes: list[str] = None):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    counties = county_codes or [None]  # None = all counties
+    # Zero-pad county codes to 3 digits (Census API requires leading zeros)
+    counties = [c.zfill(3) for c in county_codes] if county_codes else [None]
+    state_fips = state_fips.zfill(2)
     total_loaded = 0
 
     for county in counties:
