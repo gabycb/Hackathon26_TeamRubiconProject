@@ -3,6 +3,7 @@ OpsPlan API — FastAPI backend for the disaster response planning system.
 """
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import structlog
 
@@ -123,3 +124,25 @@ async def agent_chat(agent_name: str, message: dict):
 
     response = await agent.chat(message.get("text", ""))
     return {"response": response}
+
+
+@app.post("/api/export/sop")
+async def export_sop(payload: dict):
+    """
+    Export SOP as a formatted .docx document.
+    Accepts the full SOP JSON + optional event/zones data.
+    Returns a downloadable .docx file.
+    """
+    from api.export_sop import build_sop_docx
+
+    sop = payload.get("sop", {})
+    event = payload.get("event", None)
+    zones = payload.get("zones", None)
+
+    buffer = build_sop_docx(sop, event=event, zones=zones)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": "attachment; filename=OpsPlan_SOP.docx"},
+    )

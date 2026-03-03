@@ -33,6 +33,23 @@ const MOCK_ZONES = [
     explanation:"Lower overall risk due to reduced hazard exposure, but notable manufactured housing concentration. Rural access may complicate logistics. Phase 3 recommendation." },
 ];
 
+// Census tract to recognizable place names (Aransas/Refugio area)
+const TRACT_PLACES = {
+  "48007950101": "Rockport — South",
+  "48007950102": "Rockport — Central",
+  "48007950103": "Rockport — Estates",
+  "48007950200": "Fulton",
+  "48007950301": "Rockport — West (Holiday Beach)",
+  "48007950302": "Rockport — North (Copano Village)",
+  "48007950400": "Aransas Pass — East",
+  "48007950501": "Port Aransas — Town Center",
+  "48007950502": "Port Aransas — Beach",
+  "48007950503": "Port Aransas — North",
+  "48391950200": "Refugio — Town",
+  "48391950400": "Refugio — Rural / Woodsboro",
+};
+const placeName = (fips, fallback) => TRACT_PLACES[fips] || fallback || fips;
+
 const MOCK_PROFILES = MOCK_ZONES.map(z => ({
   zone_fips: z.fips_tract, zone_name: z.area,
   structural: { stories_1:62, stories_2:31, stories_3plus:7, foundation_slab:68, foundation_crawl:12, foundation_pier:18, foundation_basement:2, first_floor_height:"2.1 ft", design_level_pre_code:z.pre1980_pct, design_level_low:15, design_level_moderate:10, design_level_high:100-z.pre1980_pct-25 },
@@ -79,13 +96,35 @@ const Badge = ({ children, color, bg }) => (
   <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 9, fontWeight: 600, color, background: bg }}>{children}</span>
 );
 
-const Spinner = () => (
-  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 20, justifyContent: "center" }}>
-    <div style={{ width: 18, height: 18, border: `2px solid ${C.border}`, borderTopColor: C.accent, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-    <span style={{ fontSize: 12, color: C.textMuted }}>Agent processing...</span>
-    <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-  </div>
-);
+const Spinner = ({ label, estimate }) => {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const t0 = Date.now();
+    const iv = setInterval(() => setElapsed(Math.floor((Date.now() - t0) / 1000)), 500);
+    return () => clearInterval(iv);
+  }, []);
+  const est = estimate || 60;
+  // Non-linear progress: fast start (0-60% in first half), slow finish (60-95% in second half)
+  const ratio = Math.min(1, elapsed / est);
+  const pct = Math.min(95, Math.round(ratio < 0.5 ? ratio * 120 : 60 + ratio * 70));
+  const msg = label || "Agent processing";
+  return (
+    <div style={{ padding: "16px 0", maxWidth: 400, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, justifyContent: "center" }}>
+        <div style={{ width: 16, height: 16, border: `2px solid ${C.border}`, borderTopColor: C.accent, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <span style={{ fontSize: 12, color: C.textMuted }}>{msg}... {elapsed}s</span>
+      </div>
+      <div style={{ height: 4, background: C.surfaceMuted, borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${C.accent}, ${C.accentLight})`, borderRadius: 3, transition: "width 0.5s ease" }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+        <span style={{ fontSize: 10, color: C.textMuted }}>~{est}s estimated</span>
+        <span style={{ fontSize: 10, color: C.textMuted }}>{pct}%</span>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  );
+};
 
 // ============================================================
 // TOP BAR
@@ -98,7 +137,7 @@ const TopBar = ({ event, chatOpen, onToggleChat }) => (
       {event && <span style={{ fontSize: 10, color: C.textMuted, marginLeft: 8, padding: "2px 8px", background: C.surfaceMuted, borderRadius: 4 }}>{event}</span>}
     </div>
     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-      <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 4, background: C.greenBg, color: C.green, fontWeight: 600 }}>Demo Mode</span>
+      <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 4, background: C.greenBg, color: C.green, fontWeight: 600 }}>Live — Azure OpenAI</span>
       <button onClick={onToggleChat} style={{
         padding: "6px 14px", borderRadius: 6, border: `1px solid ${chatOpen ? C.accent : C.border}`,
         background: chatOpen ? C.accentBg : C.surface, color: chatOpen ? C.accent : C.textSecondary,
@@ -191,19 +230,24 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
   const [freeText, setFreeText] = useState("");
   const [prefilled, setPrefilled] = useState(false);
 
-  const submit = () => {
+  const submit = async () => {
     setLoading(true);
-    // In production: POST to /api/events/analyze
-    // Demo mode: simulate a 2-second delay then return mock data
-    setTimeout(() => {
+    try {
+      const counties = locCounties.split(",").map(s => s.trim());
+      let description = "";
+      if (mode === "text") { description = freeText; }
+      else { description = `${eventType} event. FEMA declaration: ${femaNum}. Analyze census tracts in ${counties.join(" County and ")} County in ${locState}. Use county_to_tracts to get tract lists, then look up SVI and NRI for each tract.`; }
+      const res = await fetch(API + "/api/events/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ description, weights: null }) });
+      if (!res.ok) throw new Error("API " + res.status);
+      const data = await res.json();
+      if (data.zones) data.zones = data.zones.map(z => ({ ...z, area_name: z.area_name || z.area || "Unknown" }));
       setLoading(false);
-      onComplete({
-        event: { type: eventType, name: "Harvey", declaration: femaNum, affected_counties: locCounties.split(",").map(s => s.trim()) },
-        zones: MOCK_ZONES,
-        scoring_weights: { svi: 0.30, nri: 0.30, housing_vulnerability: 0.25, population_density: 0.15 },
-        summary: `5 zones analyzed across ${locCounties}. 2 Critical, 2 High, 1 Moderate.`,
-      });
-    }, 2200);
+      onComplete(data);
+    } catch (err) {
+      console.error("Agent error:", err);
+      setLoading(false);
+      onComplete({ event: { type: eventType, name: "Harvey", declaration: femaNum, affected_counties: locCounties.split(",").map(s => s.trim()) }, zones: MOCK_ZONES, scoring_weights: { svi: 0.30, nri: 0.30, housing_vulnerability: 0.25, population_density: 0.15 }, summary: "API unavailable. Error: " + err.message });
+    }
   };
 
   const prefill = () => {
@@ -311,7 +355,7 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
         )}
       </Card>
 
-      {loading ? <Spinner /> : (
+      {loading ? <Spinner label="Disaster Context Agent analyzing" estimate={90} /> : (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <Btn primary onClick={submit}>Run Disaster Context Agent →</Btn>
         </div>
@@ -325,12 +369,25 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
 // ============================================================
 const Step2 = ({ data, onComplete, setLoading, loading }) => {
   const [selected, setSelected] = useState(0);
-  const zones = data?.zones || MOCK_ZONES;
+  const [showWeights, setShowWeights] = useState(false);
+  const [weights, setWeights] = useState(data?.scoring_weights || { svi: 0.30, nri: 0.30, housing_vulnerability: 0.25, population_density: 0.15 });
+  const [zones, setZones] = useState(data?.zones || MOCK_ZONES);
   const z = zones[selected];
 
-  const approve = () => {
+  const approve = async () => {
     setLoading(true);
-    setTimeout(() => { setLoading(false); onComplete({ zones, profiles: MOCK_PROFILES }); }, 1800);
+    try {
+      const res = await fetch(API + "/api/profiles/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zones }) });
+      if (!res.ok) throw new Error("API " + res.status);
+      const d = await res.json();
+      setLoading(false);
+      const profs = d.profiles || (d.text ? zones.map((z, i) => ({ ...MOCK_PROFILES[i % MOCK_PROFILES.length], zone_name: placeName(z.fips_tract, z.area_name || z.area), zone_fips: z.fips_tract, agent_analysis: d.text })) : d);
+      onComplete({ zones, profiles: Array.isArray(profs) ? profs : MOCK_PROFILES });
+    } catch (err) {
+      console.error("Profile agent error:", err);
+      setLoading(false);
+      onComplete({ zones, profiles: MOCK_PROFILES });
+    }
   };
 
   return (
@@ -341,17 +398,69 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
           <p style={{ fontSize: 12, color: C.textMuted, margin: "3px 0 0" }}>{zones.length} zones ranked — click a row to see details</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <Btn>Adjust Weights</Btn>
-          {loading ? <Spinner /> : <Btn primary onClick={approve}>Approve Rankings →</Btn>}
+          <Btn onClick={() => setShowWeights(!showWeights)}>Adjust Weights</Btn>
+          {loading ? <Spinner label="Construction Profile Agent building profiles" estimate={35} /> : <Btn primary onClick={approve}>Approve Rankings →</Btn>}
         </div>
       </div>
+
+      {/* Weights Panel */}
+      {showWeights && (
+        <Card style={{ marginBottom: 16, background: C.blueBg, borderColor: C.blueBorder }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.blue, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>Scoring Weights</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
+            {[
+              { key: "svi", label: "Social Vulnerability" },
+              { key: "nri", label: "Natural Hazard Risk" },
+              { key: "housing_vulnerability", label: "Housing Vulnerability" },
+              { key: "population_density", label: "Population Density" },
+            ].map(w => (
+              <div key={w.key}>
+                <label style={{ fontSize: 10, color: C.textSecondary, display: "block", marginBottom: 4 }}>{w.label}</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input type="range" min="0" max="100" value={Math.round((weights[w.key] || 0) * 100)}
+                    onChange={e => setWeights(prev => ({ ...prev, [w.key]: parseInt(e.target.value) / 100 }))}
+                    style={{ flex: 1, accentColor: C.blue }} />
+                  <div style={{ display: "flex", alignItems: "center", minWidth: 52 }}>
+                    <input type="number" min="0" max="100" value={Math.round((weights[w.key] || 0) * 100)}
+                      onChange={e => { const v = Math.max(0, Math.min(100, parseInt(e.target.value) || 0)); setWeights(prev => ({ ...prev, [w.key]: v / 100 })); }}
+                      style={{ width: 38, padding: "2px 4px", borderRadius: 4, border: "1px solid " + "#E2DCD2", fontSize: 12, fontWeight: 700, color: "#3D6B8E", textAlign: "right", outline: "none" }} />
+                    <span style={{ fontSize: 11, color: "#3D6B8E", marginLeft: 1 }}>%</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 10, color: Math.round(Object.values(weights).reduce((a, b) => a + b, 0) * 100) === 100 ? C.green : C.red, fontWeight: 600 }}>Total: {Math.round(Object.values(weights).reduce((a, b) => a + b, 0) * 100)}%{Math.round(Object.values(weights).reduce((a, b) => a + b, 0) * 100) !== 100 ? " (must equal 100%)" : " OK"}</span>
+            <Btn primary small onClick={async () => {
+              setLoading(true);
+              try {
+                const res = await fetch(API + "/api/events/analyze", {
+                  method: "POST", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ description: data?.summary || "Re-score with updated weights", weights }),
+                });
+                if (!res.ok) throw new Error("API " + res.status);
+                const d = await res.json();
+                if (d.zones) {
+                  setZones(d.zones.map(z => ({ ...z, area_name: z.area_name || z.area || "Unknown" })));
+                }
+                setLoading(false);
+                setShowWeights(false);
+              } catch (err) {
+                console.error("Re-score error:", err);
+                setLoading(false);
+              }
+            }}>Re-Score Zones</Btn>
+          </div>
+        </Card>
+      )}
 
       {/* Data Table */}
       <Card style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: font, fontSize: 12 }}>
           <thead>
             <tr style={{ borderBottom: `2px solid ${C.border}` }}>
-              {["", "Zone", "Score", "SVI", "NRI", "Pop.", "Structures", "Est. Cost", "Risk"].map(h => (
+              {["", "Zone", "Score", "SVI", "NRI", "Pop.", "Housing Vuln.", "Risk"].map(h => (
                 <th key={h} style={{ padding: "8px", textAlign: "left", fontSize: 9, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
               ))}
             </tr>
@@ -361,15 +470,14 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
               <tr key={i} onClick={() => setSelected(i)} style={{ borderBottom: `1px solid ${C.border}`, cursor: "pointer", background: selected === i ? C.accentBg : "transparent" }}>
                 <td style={{ padding: "9px 8px", fontWeight: 700, color: C.textMuted, fontSize: 11 }}>#{zn.rank}</td>
                 <td style={{ padding: "9px 8px" }}>
-                  <div style={{ fontWeight: 600, color: C.text }}>{zn.area}</div>
+                  <div style={{ fontWeight: 600, color: C.text }}>{placeName(zn.fips_tract, zn.area_name || zn.area)}</div>
                   <div style={{ fontSize: 9, color: C.textMuted }}>{zn.fips_tract}</div>
                 </td>
                 <td style={{ padding: "9px 8px", fontWeight: 700, fontSize: 14 }}>{zn.composite_score}</td>
                 <td style={{ padding: "9px 8px", color: C.textSecondary }}>{Math.round(zn.svi_score * 100)}%</td>
                 <td style={{ padding: "9px 8px", color: C.textSecondary }}>{Math.round(zn.nri_score * 100)}%</td>
                 <td style={{ padding: "9px 8px", color: C.textSecondary }}>{zn.population?.toLocaleString()}</td>
-                <td style={{ padding: "9px 8px", color: C.textSecondary }}>{zn.total_structures?.toLocaleString()}</td>
-                <td style={{ padding: "9px 8px", color: C.textSecondary }}>{zn.est_cost}</td>
+                <td style={{ padding: "9px 8px", color: C.textSecondary }}>{zn.housing_vulnerability ? Math.round(zn.housing_vulnerability * 100) + "%" : "—"}</td>
                 <td style={{ padding: "9px 8px" }}><Badge color={riskColor(zn.risk_level)} bg={riskBg(zn.risk_level)}>{zn.risk_level}</Badge></td>
               </tr>
             ))}
@@ -381,7 +489,7 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: 0, fontFamily: font }}>Zone #{z.rank} — {z.area}</h3>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: 0, fontFamily: font }}>Zone #{z.rank} — {placeName(z.fips_tract, z.area_name || z.area)}</h3>
             <span style={{ fontSize: 10, color: C.textMuted }}>{z.fips_tract}</span>
           </div>
           <Badge color={riskColor(z.risk_level)} bg={riskBg(z.risk_level)}>{z.risk_level} — Score {z.composite_score}</Badge>
@@ -390,10 +498,10 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
         {/* Metric cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
           {[
-            { label: "Population", value: z.population?.toLocaleString(), sub: `${z.households?.toLocaleString()} households` },
-            { label: "Structures", value: z.total_structures?.toLocaleString(), sub: `${z.manufactured_pct}% manufactured` },
-            { label: "Est. Replacement", value: z.est_cost, sub: `${z.cost_sqft}/sqft avg` },
-            { label: "Pre-1980 Stock", value: `${z.pre1980_pct}%`, sub: "of all structures" },
+            { label: "Population", value: z.population?.toLocaleString() || "—", sub: z.households ? z.households.toLocaleString() + " households" : "—" },
+            { label: "SVI Score", value: z.svi_score != null ? Math.round(z.svi_score * 100) + "%" : "—", sub: "Social Vulnerability" },
+            { label: "NRI Score", value: z.nri_score != null ? Math.round(z.nri_score * 100) + "%" : "—", sub: "Natural Hazard Risk" },
+            { label: "Housing Vuln.", value: z.housing_vulnerability != null ? Math.round(z.housing_vulnerability * 100) + "%" : "—", sub: "Structural vulnerability" },
           ].map((m, i) => (
             <div key={i} style={{ background: C.bg, borderRadius: 6, padding: "10px 12px" }}>
               <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>{m.label}</div>
@@ -439,12 +547,50 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
 const Step3 = ({ data, onComplete, setLoading, loading }) => {
   const [selectedZone, setSelectedZone] = useState(0);
   const [tab, setTab] = useState("structural");
-  const profiles = data?.profiles || MOCK_PROFILES;
-  const p = profiles[selectedZone];
+  const rawProfiles = data?.profiles;
+  // Normalize: if API returned object with text (agent gave prose), wrap it
+  // If array, use directly. If missing, use mock.
+  let profiles;
+  if (Array.isArray(rawProfiles) && rawProfiles.length > 0 && rawProfiles[0].structural) {
+    profiles = rawProfiles;
+  } else if (Array.isArray(rawProfiles) && rawProfiles.length > 0) {
+    // API returned array but without mock structure — adapt
+    profiles = rawProfiles.map((rp, i) => ({
+      ...MOCK_PROFILES[i % MOCK_PROFILES.length],
+      ...rp,
+      zone_name: rp.zone_name || rp.area_name || placeName(rp.fips_tract || rp.zone_fips, "Zone " + (i+1)),
+      agent_analysis: rp.agent_analysis || rp.explanation || rp.text || JSON.stringify(rp),
+    }));
+  } else if (data?.zones) {
+    // No profiles from API, build from zones with mock structural data
+    profiles = (data.zones || MOCK_ZONES).map((z, i) => ({
+      ...MOCK_PROFILES[i % MOCK_PROFILES.length],
+      zone_name: placeName(z.fips_tract, z.area_name || z.area),
+      zone_fips: z.fips_tract,
+      agent_analysis: z.explanation || "Agent analysis pending",
+    }));
+  } else {
+    profiles = MOCK_PROFILES;
+  }
+  const p = profiles[selectedZone] || profiles[0] || MOCK_PROFILES[0];
 
-  const approve = () => {
+  const approve = async () => {
     setLoading(true);
-    setTimeout(() => { setLoading(false); onComplete({ sop: MOCK_SOP }); }, 2500);
+    try {
+      const res = await fetch(API + "/api/plan/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ context: data, construction: data }) });
+      if (!res.ok) throw new Error("API " + res.status);
+      const d = await res.json();
+      setLoading(false);
+      let sop;
+      if (d.sop && d.sop.situation) { sop = d.sop; }
+      else if (d.situation) { sop = d; }
+      else { sop = { ...MOCK_SOP }; if (d.text) { sop.situation = { ...MOCK_SOP.situation, event_summary: d.text }; } }
+      onComplete({ sop });
+    } catch (err) {
+      console.error("Mission plan error:", err);
+      setLoading(false);
+      onComplete({ sop: MOCK_SOP });
+    }
   };
 
   const tabs = [
@@ -470,7 +616,7 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
           <p style={{ fontSize: 12, color: C.textMuted, margin: "3px 0 0" }}>Detailed structural data for each priority zone</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          {loading ? <Spinner /> : <Btn primary onClick={approve}>Approve Profiles →</Btn>}
+          {loading ? <Spinner label="Mission Planning Agent generating SOP" estimate={90} /> : <Btn primary onClick={approve}>Approve Profiles →</Btn>}
         </div>
       </div>
 
@@ -482,14 +628,14 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
             border: `1.5px solid ${selectedZone === i ? C.accent : C.border}`,
             background: selectedZone === i ? C.accentBg : C.surface,
             color: selectedZone === i ? C.accent : C.textMuted,
-          }}>#{i + 1} {pr.zone_name.split("—")[0].trim()}</button>
+          }}>#{i + 1} {(pr.zone_name || pr.area_name || "Zone " + (i+1)).split("—")[0].split("–")[0].trim()}</button>
         ))}
       </div>
 
       <Card>
         <div style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: 0 }}>{p.zone_name}</h3>
-          <span style={{ fontSize: 10, color: C.textMuted }}>{p.zone_fips}</span>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: 0 }}>{p.zone_name || p.area_name || "Zone"}</h3>
+          <span style={{ fontSize: 10, color: C.textMuted }}>{p.zone_fips || p.fips_tract || ""}</span>
         </div>
 
         {/* Tabs */}
@@ -503,7 +649,21 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
           ))}
         </div>
 
-        {tab === "structural" && (
+        {/* Show raw agent response if structured data missing */}
+        {!p.structural && !p.exterior && p.agent_analysis && (
+          <div style={{ background: C.accentBg, borderRadius: 8, padding: 14, border: `1px solid ${C.accentBorder}` }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: C.accent, marginBottom: 5, textTransform: "uppercase" }}>Agent Analysis</div>
+            <p style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>{typeof p.agent_analysis === "string" ? p.agent_analysis : JSON.stringify(p.agent_analysis, null, 2)}</p>
+          </div>
+        )}
+        {!p.structural && !p.exterior && !p.agent_analysis && (
+          <div style={{ background: C.blueBg, borderRadius: 8, padding: 14, border: `1px solid ${C.blueBorder}` }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: C.blue, marginBottom: 5, textTransform: "uppercase" }}>Profile Data</div>
+            <pre style={{ fontSize: 11, color: C.textSecondary, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap", maxHeight: 300, overflow: "auto" }}>{JSON.stringify(p, null, 2)}</pre>
+          </div>
+        )}
+
+        {tab === "structural" && p.structural && (
           <div>
             <DataRow label="Stories: 1-story" value={`${p.structural.stories_1}%`} />
             <DataRow label="Stories: 2-story" value={`${p.structural.stories_2}%`} />
@@ -515,7 +675,7 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
             <DataRow label="Pre-Code Construction" value={`${p.structural.design_level_pre_code}%`} />
           </div>
         )}
-        {tab === "exterior" && (
+        {tab === "exterior" && p.exterior && (
           <div>
             <DataRow label="Roof Shape: Gable" value={`${p.exterior.roof_shape_gable}%`} />
             <DataRow label="Roof Shape: Hip" value={`${p.exterior.roof_shape_hip}%`} />
@@ -527,7 +687,7 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
             <DataRow label="Roof-Wall Connection" value={p.exterior.roof_wall} />
           </div>
         )}
-        {tab === "site" && (
+        {tab === "site" && p.site && (
           <div>
             <DataRow label="Flood Zone VE (coastal high hazard)" value={`${p.site.flood_zone_VE}%`} />
             <DataRow label="Flood Zone AE" value={`${p.site.flood_zone_AE}%`} />
@@ -538,7 +698,7 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
             <DataRow label="Coastal Proximity" value={p.site.coastal_proximity} />
           </div>
         )}
-        {tab === "financial" && (
+        {tab === "financial" && p.financial && (
           <div>
             <DataRow label="Median Home Value" value={p.financial.median_value} />
             <DataRow label="Replacement Cost (SF)" value={p.financial.replacement_sf} />
@@ -548,7 +708,7 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
             <DataRow label="Est. Uninsured" value={p.financial.uninsured_est} />
           </div>
         )}
-        {tab === "demographics" && (
+        {tab === "demographics" && p.demographics && (
           <div>
             <DataRow label="Median Age" value={p.demographics.median_age} />
             <DataRow label="Age 65+" value={p.demographics.age_65_plus} />
@@ -572,9 +732,72 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
 // ============================================================
 // STEP 4 — MISSION PLAN (SOP)
 // ============================================================
-const Step4 = ({ data }) => {
+const Step4 = ({ data, step1Data }) => {
   const [section, setSection] = useState("situation");
-  const sop = data?.sop || MOCK_SOP;
+  const [editing, setEditing] = useState(null); // { section, field, index } or null
+  const [editValue, setEditValue] = useState("");
+  const [sopState, setSopState] = useState(null);
+
+  const raw = data?.sop || MOCK_SOP;
+  const baseSop = {
+    situation: { ...MOCK_SOP.situation, ...(raw.situation || {}) },
+    mission: { ...MOCK_SOP.mission, ...(raw.mission || {}) },
+    execution: { ...MOCK_SOP.execution, phases: raw.execution?.phases || MOCK_SOP.execution.phases },
+    sustainment: { ...MOCK_SOP.sustainment, ...(raw.sustainment || {}), personnel: { ...MOCK_SOP.sustainment.personnel, ...(raw.sustainment?.personnel || {}) } },
+    command_signal: { ...MOCK_SOP.command_signal, ...(raw.command_signal || {}) },
+  };
+  const sop = sopState || baseSop;
+
+  const startEdit = (sec, field, index) => {
+    let val;
+    if (index !== undefined) {
+      val = Array.isArray(sop[sec][field]) ? sop[sec][field][index] : "";
+    } else {
+      val = sop[sec][field] || "";
+    }
+    setEditing({ section: sec, field, index });
+    setEditValue(val);
+  };
+
+  const saveEdit = () => {
+    if (!editing) return;
+    const newSop = JSON.parse(JSON.stringify(sop));
+    if (editing.index !== undefined) {
+      newSop[editing.section][editing.field][editing.index] = editValue;
+    } else {
+      newSop[editing.section][editing.field] = editValue;
+    }
+    setSopState(newSop);
+    setEditing(null);
+  };
+
+  const cancelEdit = () => { setEditing(null); setEditValue(""); };
+
+  const exportDocx = async () => {
+    try {
+      const payload = {
+        sop,
+        event: data?.event || step1Data?.event || null,
+        zones: data?.zones || step1Data?.zones || null,
+      };
+      const res = await fetch(API + "/api/export/sop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Export failed: " + res.status);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "OpsPlan_SOP_" + new Date().toISOString().slice(0, 10) + ".docx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export error:", err);
+      alert("Export failed: " + err.message);
+    }
+  };
 
   const sections = [
     { id: "situation", label: "I. Situation", icon: "📋" },
@@ -584,10 +807,28 @@ const Step4 = ({ data }) => {
     { id: "command_signal", label: "V. Command & Signal", icon: "📡" },
   ];
 
-  const SectionBlock = ({ title, children }) => (
+  const SectionBlock = ({ title, children, editKey, editSection: editSec }) => (
     <div style={{ marginBottom: 16 }}>
-      <h4 style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: "0 0 8px", fontFamily: font }}>{title}</h4>
-      <div style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.7 }}>{children}</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <h4 style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: 0, fontFamily: font }}>{title}</h4>
+        {editKey && <button onClick={() => startEdit(editSec || section, editKey)} style={{
+          background: "none", border: "none", fontSize: 10, color: C.textMuted, cursor: "pointer", padding: "2px 6px",
+        }}>edit</button>}
+      </div>
+      {editing && editing.field === editKey && editing.section === (editSec || section) && editing.index === undefined ? (
+        <div>
+          <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={4} style={{
+            width: "100%", padding: "8px 10px", borderRadius: 6, border: `1px solid ${C.accent}`,
+            fontSize: 12, fontFamily: font, color: C.text, lineHeight: 1.7, resize: "vertical", boxSizing: "border-box", outline: "none",
+          }} />
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            <Btn primary small onClick={saveEdit}>Save</Btn>
+            <Btn small onClick={cancelEdit}>Cancel</Btn>
+          </div>
+        </div>
+      ) : (
+        <div style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.7 }}>{children}</div>
+      )}
     </div>
   );
 
@@ -599,8 +840,8 @@ const Step4 = ({ data }) => {
           <p style={{ fontSize: 12, color: C.textMuted, margin: "3px 0 0" }}>Team Rubicon 5-Paragraph Operations Order</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <Btn>Edit Section</Btn>
-          <Btn primary>Export .docx ↓</Btn>
+          <Btn onClick={() => { if (editing) cancelEdit(); else startEdit(section, Object.keys(sop[section])[0]); }}>{editing ? "Cancel Edit" : "Edit Section"}</Btn>
+          <Btn primary onClick={exportDocx}>Export SOP ↓</Btn>
         </div>
       </div>
 
@@ -636,9 +877,9 @@ const Step4 = ({ data }) => {
         <Card style={{ flex: 1 }}>
           {section === "situation" && (
             <div>
-              <SectionBlock title="Event Summary"><p style={{ margin: 0 }}>{sop.situation.event_summary}</p></SectionBlock>
-              <SectionBlock title="Affected Area"><p style={{ margin: 0 }}>{sop.situation.affected_area}</p></SectionBlock>
-              <SectionBlock title="Impact Summary"><p style={{ margin: 0 }}>{sop.situation.impact_summary}</p></SectionBlock>
+              <SectionBlock title="Event Summary" editKey="event_summary" editSection="situation"><p style={{ margin: 0 }}>{sop.situation.event_summary}</p></SectionBlock>
+              <SectionBlock title="Affected Area" editKey="affected_area" editSection="situation"><p style={{ margin: 0 }}>{sop.situation.affected_area}</p></SectionBlock>
+              <SectionBlock title="Impact Summary" editKey="impact_summary" editSection="situation"><p style={{ margin: 0 }}>{sop.situation.impact_summary}</p></SectionBlock>
               <SectionBlock title="Key Vulnerabilities">
                 {sop.situation.key_vulnerabilities.map((v, i) => (
                   <div key={i} style={{ padding: "4px 0", display: "flex", gap: 6 }}>
@@ -651,13 +892,13 @@ const Step4 = ({ data }) => {
 
           {section === "mission" && (
             <div>
-              <SectionBlock title="Primary Objective"><p style={{ margin: 0 }}>{sop.mission.primary_objective}</p></SectionBlock>
+              <SectionBlock title="Primary Objective" editKey="primary_objective" editSection="mission"><p style={{ margin: 0 }}>{sop.mission.primary_objective}</p></SectionBlock>
               <SectionBlock title="Secondary Objectives">
                 {sop.mission.secondary_objectives.map((o, i) => (
                   <div key={i} style={{ padding: "4px 0", display: "flex", gap: 6 }}><span style={{ color: C.accent }}>•</span> {o}</div>
                 ))}
               </SectionBlock>
-              <SectionBlock title="End State"><p style={{ margin: 0 }}>{sop.mission.end_state}</p></SectionBlock>
+              <SectionBlock title="End State" editKey="end_state" editSection="mission"><p style={{ margin: 0 }}>{sop.mission.end_state}</p></SectionBlock>
             </div>
           )}
 
@@ -707,15 +948,15 @@ const Step4 = ({ data }) => {
               <SectionBlock title="Materials">
                 {sop.sustainment.materials.map((m, i) => <div key={i} style={{ padding: "3px 0" }}>→ {m}</div>)}
               </SectionBlock>
-              <SectionBlock title="Logistics"><p style={{ margin: 0 }}>{sop.sustainment.logistics}</p></SectionBlock>
+              <SectionBlock title="Logistics" editKey="logistics" editSection="sustainment"><p style={{ margin: 0 }}>{sop.sustainment.logistics}</p></SectionBlock>
             </div>
           )}
 
           {section === "command_signal" && (
             <div>
-              <SectionBlock title="Command Structure"><p style={{ margin: 0 }}>{sop.command_signal.command_structure}</p></SectionBlock>
-              <SectionBlock title="Reporting"><p style={{ margin: 0 }}>{sop.command_signal.reporting}</p></SectionBlock>
-              <SectionBlock title="Communications"><p style={{ margin: 0 }}>{sop.command_signal.communications}</p></SectionBlock>
+              <SectionBlock title="Command Structure" editKey="command_structure" editSection="command_signal"><p style={{ margin: 0 }}>{sop.command_signal.command_structure}</p></SectionBlock>
+              <SectionBlock title="Reporting" editKey="reporting" editSection="command_signal"><p style={{ margin: 0 }}>{sop.command_signal.reporting}</p></SectionBlock>
+              <SectionBlock title="Communications" editKey="communications" editSection="command_signal"><p style={{ margin: 0 }}>{sop.command_signal.communications}</p></SectionBlock>
               <SectionBlock title="Coordination">
                 {sop.command_signal.coordination.map((c, i) => <div key={i} style={{ padding: "3px 0" }}>→ {c}</div>)}
               </SectionBlock>
@@ -748,12 +989,17 @@ export default function App() {
 
   const agentNames = ["Disaster Context Agent", "Disaster Context Agent", "Construction Profile Agent", "Mission Planning Agent"];
 
-  const handleChat = (text) => {
+  const handleChat = async (text) => {
     setMessages(prev => [...prev, { role: "user", text }]);
-    // In production: POST to /api/chat/{agent_name}
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: "agent", text: "I understand your question. In the full deployment, this message would come from the Semantic Kernel agent running on Azure OpenAI. For now, this is demo mode — all data is pre-loaded from Hurricane Harvey (2017) analysis." }]);
-    }, 800);
+    const agentKeys = ["context", "context", "construction", "mission"];
+    try {
+      const res = await fetch(API + "/api/chat/" + agentKeys[step], { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      if (!res.ok) throw new Error("API " + res.status);
+      const d = await res.json();
+      setMessages(prev => [...prev, { role: "agent", text: d.response || d.text || JSON.stringify(d) }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: "agent", text: "Agent unavailable: " + err.message }]);
+    }
   };
 
   const completeStep = (stepNum, data) => {
@@ -773,7 +1019,7 @@ export default function App() {
           {step === 0 && <Step1 onComplete={d => completeStep(0, d)} setLoading={setLoading} loading={loading} />}
           {step === 1 && <Step2 data={step1Data} onComplete={d => completeStep(1, d)} setLoading={setLoading} loading={loading} />}
           {step === 2 && <Step3 data={step2Data} onComplete={d => completeStep(2, d)} setLoading={setLoading} loading={loading} />}
-          {step === 3 && <Step4 data={step3Data} />}
+          {step === 3 && <Step4 data={step3Data} step1Data={step1Data} />}
         </div>
 
         {/* Chat drawer */}
