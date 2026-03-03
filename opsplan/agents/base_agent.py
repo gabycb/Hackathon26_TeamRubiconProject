@@ -13,11 +13,11 @@ import json
 import structlog
 from typing import Any
 from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
-from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-from semantic_kernel.connectors.ai.open_ai.prompt_execution_settings import (
+from semantic_kernel.connectors.ai.open_ai import (
+    AzureChatCompletion,
     OpenAIChatPromptExecutionSettings,
 )
+from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.contents import ChatHistory
 
 from config.settings import settings
