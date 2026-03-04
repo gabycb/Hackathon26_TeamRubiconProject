@@ -71,7 +71,7 @@ Always return valid JSON with this structure:
       "population": 2847,
       "households": 1120,
       "total_structures": 1240,
-      "explanation": "Highest per-capita risk due to..."
+      "explanation": "PRIORITY: Deploy first — SVI 0.89 with 40% age 65+ and 6.3% limited English speakers. 850 manufactured homes at high wind risk. Median income $43K limits self-recovery capacity. RECOMMEND immediate bilingual assessment team."
     }
   ],
   "scoring_weights": {
@@ -86,6 +86,12 @@ Always return valid JSON with this structure:
 
 Be precise with data. Never fabricate numbers — always use the tools to get real values.
 When a tool returns no data for a tract, note it and explain the limitation.
+
+CRITICAL: Each zone's "explanation" field must be a concrete, actionable recommendation 
+starting with "PRIORITY:" or "RECOMMEND:" — not a generic description. Include specific 
+operational guidance: what type of team to deploy first, what vulnerabilities to watch for,
+what population needs exist (language, age, disability, poverty). Reference specific data 
+points from SVI themes and Census demographics.
 """
 
 

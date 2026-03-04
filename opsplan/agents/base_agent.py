@@ -157,22 +157,30 @@ class BaseAgent:
 
         # Direct JSON parse
         try:
-            return json.loads(clean)
+            parsed = json.loads(clean)
+            # If it's a list, wrap it so callers always get a dict
+            if isinstance(parsed, list):
+                return {"profiles": parsed}
+            return parsed
         except json.JSONDecodeError:
             pass
 
-        # Find first JSON object in text
+        # Find first JSON object or array in text
         for i, ch in enumerate(clean):
-            if ch == "{":
+            if ch in ("{", "["):
+                close = "}" if ch == "{" else "]"
                 depth = 0
                 for j in range(i, len(clean)):
-                    if clean[j] == "{":
+                    if clean[j] == ch:
                         depth += 1
-                    elif clean[j] == "}":
+                    elif clean[j] == close:
                         depth -= 1
                     if depth == 0:
                         try:
-                            return json.loads(clean[i : j + 1])
+                            parsed = json.loads(clean[i : j + 1])
+                            if isinstance(parsed, list):
+                                return {"profiles": parsed}
+                            return parsed
                         except json.JSONDecodeError:
                             break
                 break

@@ -223,17 +223,30 @@ const ChatDrawer = ({ messages, onSend, agentName }) => {
 // ============================================================
 const Step1 = ({ onComplete, setLoading, loading }) => {
   const [mode, setMode] = useState("fema"); // fema | location | text
-  const [femaNum, setFemaNum] = useState("DR-4332-TX");
-  const [locState, setLocState] = useState("Texas");
-  const [locCounties, setLocCounties] = useState("Aransas, Refugio");
-  const [eventType, setEventType] = useState("Hurricane");
+  const [femaNum, setFemaNum] = useState("");
+  const [locState, setLocState] = useState("");
+  const [locCounties, setLocCounties] = useState("");
+  const [eventType, setEventType] = useState("");
   const [freeText, setFreeText] = useState("");
   const [prefilled, setPrefilled] = useState(false);
 
+  const [formError, setFormError] = useState("");
+
   const submit = async () => {
+    setFormError("");
+    // Validate required fields
+    if (mode === "text") {
+      if (!freeText.trim()) { setFormError("Please enter an event description."); return; }
+    } else {
+      const missing = [];
+      if (!eventType) missing.push("Event Type");
+      if (!locState.trim()) missing.push("State");
+      if (!locCounties.trim()) missing.push("Affected Counties");
+      if (missing.length > 0) { setFormError("Required fields: " + missing.join(", ")); return; }
+    }
     setLoading(true);
     try {
-      const counties = locCounties.split(",").map(s => s.trim());
+      const counties = locCounties.split(",").map(s => s.trim()).filter(Boolean);
       let description = "";
       if (mode === "text") { description = freeText; }
       else { description = `${eventType} event. FEMA declaration: ${femaNum}. Analyze census tracts in ${counties.join(" County and ")} County in ${locState}. Use county_to_tracts to get tract lists, then look up SVI and NRI for each tract.`; }
@@ -298,7 +311,7 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
             <div>
               <label style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, display: "block", marginBottom: 4 }}>FEMA Declaration Number</label>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input value={femaNum} onChange={e => setFemaNum(e.target.value)} placeholder="DR-4332-TX"
+                <input value={femaNum} onChange={e => setFemaNum(e.target.value)} placeholder="e.g. DR-4332-TX"
                   style={{ flex: 1, padding: "10px 14px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: font, outline: "none", color: C.text }} />
                 {prefilled && <Badge color={C.green} bg={C.greenBg}>AUTO</Badge>}
               </div>
@@ -307,7 +320,7 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, display: "block", marginBottom: 4 }}>Event Type</label>
                 <select value={eventType} onChange={e => setEventType(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: font, background: C.surface, color: C.text }}>
-                  {["Hurricane", "Tornado", "Flood", "Earthquake", "Wildfire", "Winter Storm", "Other"].map(t => <option key={t}>{t}</option>)}
+                  {["", "Hurricane", "Tornado", "Flood", "Earthquake", "Wildfire", "Winter Storm", "Other"].map(t => <option key={t} value={t}>{t || "Select event type..."}</option>)}
                 </select>
               </div>
               <div>
@@ -317,7 +330,7 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
             </div>
             <div>
               <label style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, display: "block", marginBottom: 4 }}>Affected Counties</label>
-              <input value={locCounties} onChange={e => setLocCounties(e.target.value)} placeholder="Aransas, Refugio, Calhoun"
+              <input value={locCounties} onChange={e => setLocCounties(e.target.value)} placeholder="e.g. Harris, Galveston, Brazoria"
                 style={{ width: "100%", padding: "10px 14px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: font, outline: "none", color: C.text, boxSizing: "border-box" }} />
             </div>
           </div>
@@ -329,7 +342,7 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, display: "block", marginBottom: 4 }}>Event Type</label>
                 <select value={eventType} onChange={e => setEventType(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: font, background: C.surface, color: C.text }}>
-                  {["Hurricane", "Tornado", "Flood", "Earthquake", "Wildfire", "Winter Storm", "Other"].map(t => <option key={t}>{t}</option>)}
+                  {["", "Hurricane", "Tornado", "Flood", "Earthquake", "Wildfire", "Winter Storm", "Other"].map(t => <option key={t} value={t}>{t || "Select event type..."}</option>)}
                 </select>
               </div>
               <div>
@@ -354,6 +367,12 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
           </div>
         )}
       </Card>
+
+      {formError && (
+        <div style={{ padding: "10px 14px", background: "#FDF2F2", borderRadius: 6, border: "1px solid #E8C4C4", marginBottom: 12 }}>
+          <span style={{ color: "#B33A3A", fontSize: 12, fontWeight: 600 }}>{formError}</span>
+        </div>
+      )}
 
       {loading ? <Spinner label="Disaster Context Agent analyzing" estimate={90} /> : (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -544,7 +563,7 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
 // ============================================================
 // STEP 3 — CONSTRUCTION PROFILES
 // ============================================================
-const Step3 = ({ data, onComplete, setLoading, loading }) => {
+const Step3 = ({ data, step1Data, onComplete, setLoading, loading }) => {
   const [selectedZone, setSelectedZone] = useState(0);
   const [tab, setTab] = useState("structural");
   const rawProfiles = data?.profiles;
@@ -577,7 +596,7 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
   const approve = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API + "/api/plan/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ context: data, construction: data }) });
+      const res = await fetch(API + "/api/plan/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ context: step1Data || data, construction: { zones: data?.zones, profiles } }) });
       if (!res.ok) throw new Error("API " + res.status);
       const d = await res.json();
       setLoading(false);
@@ -599,6 +618,7 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
     { id: "site", label: "Site & Hazard" },
     { id: "financial", label: "Financial" },
     { id: "demographics", label: "Demographics" },
+    { id: "tr_vulnerability", label: "TR Vulnerability" },
   ];
 
   const DataRow = ({ label, value }) => (
@@ -700,23 +720,37 @@ const Step3 = ({ data, onComplete, setLoading, loading }) => {
         )}
         {tab === "financial" && p.financial && (
           <div>
-            <DataRow label="Median Home Value" value={p.financial.median_value} />
-            <DataRow label="Replacement Cost (SF)" value={p.financial.replacement_sf} />
-            <DataRow label="Replacement Cost (Manufactured)" value={p.financial.replacement_mfg} />
-            <DataRow label="Est. Total Replacement" value={p.financial.replacement_total} />
-            <DataRow label="Flood Insurance Penetration" value={p.financial.flood_insurance} />
-            <DataRow label="Est. Uninsured" value={p.financial.uninsured_est} />
+            <DataRow label="Median Home Value" value={p.financial.median_home_value || p.financial.median_value} />
+            <DataRow label="Median Household Income" value={p.financial.median_household_income} />
+            <DataRow label="Median Contract Rent" value={p.financial.median_rent || p.financial.median_contract_rent} />
+            <DataRow label="Est. Total Replacement Cost" value={p.financial.replacement_cost_est || p.financial.replacement_total} />
           </div>
         )}
         {tab === "demographics" && p.demographics && (
           <div>
+            <DataRow label="Total Population" value={(p.demographics.total_population || "").toLocaleString()} />
             <DataRow label="Median Age" value={p.demographics.median_age} />
-            <DataRow label="Age 65+" value={p.demographics.age_65_plus} />
-            <DataRow label="Disability Rate" value={p.demographics.disability} />
-            <DataRow label="Below Poverty" value={p.demographics.below_poverty} />
-            <DataRow label="Limited English" value={p.demographics.limited_english} />
-            <DataRow label="No Vehicle" value={p.demographics.no_vehicle} />
+            <DataRow label="Age 65+" value={p.demographics.age_65_plus_pct != null ? p.demographics.age_65_plus_pct + "%" : p.demographics.age_65_plus} />
+            <DataRow label="Disability Rate" value={p.demographics.disability_pct != null ? p.demographics.disability_pct + "%" : p.demographics.disability} />
+            <DataRow label="Below Poverty" value={p.demographics.below_poverty_pct != null ? p.demographics.below_poverty_pct + "%" : p.demographics.below_poverty} />
+            <DataRow label="Limited English" value={p.demographics.limited_english_pct != null ? p.demographics.limited_english_pct + "%" : p.demographics.limited_english} />
+            <DataRow label="No Vehicle" value={p.demographics.no_vehicle_pct != null ? p.demographics.no_vehicle_pct + "%" : p.demographics.no_vehicle} />
+            <DataRow label="Tenant Occupied" value={p.demographics.tenant_occupied_pct != null ? p.demographics.tenant_occupied_pct + "%" : ""} />
           </div>
+        )}
+
+        {tab === "tr_vulnerability" && p.tr_vulnerability && (
+          <div>
+            <DataRow label="Overall SVI Score" value={p.tr_vulnerability.svi_score} />
+            <DataRow label="SVI Rating" value={p.tr_vulnerability.svi_rating} />
+            <DataRow label="Theme 1: Socio-Economic" value={p.tr_vulnerability.theme_1_socioeconomic} />
+            <DataRow label="Theme 2: Household Comp / Disability" value={p.tr_vulnerability.theme_2_household_disability} />
+            <DataRow label="Theme 3: Minority / Language" value={p.tr_vulnerability.theme_3_minority_language} />
+            <DataRow label="Theme 4: Housing / Transport" value={p.tr_vulnerability.theme_4_housing_transport} />
+          </div>
+        )}
+        {tab === "tr_vulnerability" && !p.tr_vulnerability && (
+          <div style={{ padding: 20, textAlign: "center", color: C.textMuted, fontSize: 12 }}>TR vulnerability data not available for this zone</div>
         )}
 
         {/* Agent analysis */}
@@ -799,6 +833,30 @@ const Step4 = ({ data, step1Data }) => {
     }
   };
 
+  const [showEmail, setShowEmail] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
+
+  const sendEmail = () => {
+    // Build mailto link with SOP summary
+    const subject = encodeURIComponent("OpsPlan SOP — " + (sop.situation.event_summary || "").substring(0, 60));
+    const body = encodeURIComponent(
+      "Team,\n\n" +
+      "The Operations Order for this event is ready for review.\n\n" +
+      "SITUATION: " + (sop.situation.event_summary || "") + "\n\n" +
+      "MISSION: " + (sop.mission.primary_objective || "") + "\n\n" +
+      "Please download the attached .docx from OpsPlan for the complete 5-paragraph order.\n\n" +
+      "Key Numbers:\n" +
+      "- Zones: " + (sop.execution.phases?.[0]?.zone_assignments || "See SOP") + "\n" +
+      "- Personnel: " + (sop.sustainment.personnel?.total || "See SOP") + " core team\n" +
+      "- Duration: " + (sop.execution.phases?.[2]?.timeline || "See SOP") + "\n\n" +
+      "Generated by OpsPlan AI — Team Rubicon"
+    );
+    const emails = emailTo.split(",").map(e => e.trim()).join(",");
+    window.open("mailto:" + emails + "?subject=" + subject + "&body=" + body);
+    setEmailSent(true);
+  };
+
   const sections = [
     { id: "situation", label: "I. Situation", icon: "📋" },
     { id: "mission", label: "II. Mission", icon: "🎯" },
@@ -841,9 +899,33 @@ const Step4 = ({ data, step1Data }) => {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Btn onClick={() => { if (editing) cancelEdit(); else startEdit(section, Object.keys(sop[section])[0]); }}>{editing ? "Cancel Edit" : "Edit Section"}</Btn>
+          <Btn onClick={() => setShowEmail(true)}>Email to Team</Btn>
           <Btn primary onClick={exportDocx}>Export SOP ↓</Btn>
         </div>
       </div>
+
+      {/* Email Modal */}
+      {showEmail && (
+        <Card style={{ marginBottom: 16, background: C.blueBg, borderColor: C.blueBorder }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.blue, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>Send to Team</div>
+          {emailSent ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ color: C.green, fontWeight: 600, fontSize: 13 }}>Email client opened</span>
+              <Btn small onClick={() => { setShowEmail(false); setEmailSent(false); }}>Close</Btn>
+            </div>
+          ) : (
+            <div>
+              <p style={{ fontSize: 12, color: C.textSecondary, margin: "0 0 8px" }}>Enter email addresses (comma-separated). This will open your email client with a summary. Download the .docx first to attach it.</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={emailTo} onChange={e => setEmailTo(e.target.value)} placeholder="ops@teamrubicon.org, ic@teamrubicon.org"
+                  style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: font, outline: "none" }} />
+                <Btn primary small onClick={sendEmail}>Send</Btn>
+                <Btn small onClick={() => setShowEmail(false)}>Cancel</Btn>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
 
       <div style={{ display: "flex", gap: 16 }}>
         {/* Section nav */}
@@ -1018,7 +1100,7 @@ export default function App() {
         <div style={{ flex: 1, padding: "20px 28px", overflowY: "auto", background: C.bg }}>
           {step === 0 && <Step1 onComplete={d => completeStep(0, d)} setLoading={setLoading} loading={loading} />}
           {step === 1 && <Step2 data={step1Data} onComplete={d => completeStep(1, d)} setLoading={setLoading} loading={loading} />}
-          {step === 2 && <Step3 data={step2Data} onComplete={d => completeStep(2, d)} setLoading={setLoading} loading={loading} />}
+          {step === 2 && <Step3 data={step2Data} step1Data={step1Data} onComplete={d => completeStep(2, d)} setLoading={setLoading} loading={loading} />}
           {step === 3 && <Step4 data={step3Data} step1Data={step1Data} />}
         </div>
 
