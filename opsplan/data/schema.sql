@@ -219,6 +219,25 @@ CREATE TABLE IF NOT EXISTS field_assessments (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Inbound communications inbox (SMS + Email)
+CREATE TABLE IF NOT EXISTS inbound_messages (
+    id TEXT PRIMARY KEY,
+    channel TEXT NOT NULL CHECK (channel IN ('sms', 'email')),
+    provider TEXT NOT NULL CHECK (provider IN ('acs', 'graph')),
+    provider_event_id TEXT NOT NULL UNIQUE,
+    received_at TEXT,
+    from_address TEXT,
+    to_address TEXT,
+    subject TEXT,
+    body_text TEXT,
+    body_html TEXT,
+    attachments_json TEXT,
+    raw_payload_json TEXT NOT NULL,
+    parse_status TEXT DEFAULT 'raw_only',
+    parse_error TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_svi_county ON svi(county_fips);
 CREATE INDEX IF NOT EXISTS idx_svi_state ON svi(state_fips);
@@ -226,3 +245,5 @@ CREATE INDEX IF NOT EXISTS idx_census_county ON census_housing(county_fips);
 CREATE INDEX IF NOT EXISTS idx_hazus_tract ON hazus_gbs(fips_tract);
 CREATE INDEX IF NOT EXISTS idx_field_tract ON field_assessments(fips_tract);
 CREATE INDEX IF NOT EXISTS idx_field_timestamp ON field_assessments(created_at);
+CREATE INDEX IF NOT EXISTS idx_inbound_channel ON inbound_messages(channel);
+CREATE INDEX IF NOT EXISTS idx_inbound_received_at ON inbound_messages(received_at);

@@ -104,3 +104,45 @@ class ChatResponse(BaseModel):
     """Chat response from an agent."""
     response: str
     agent: str
+
+
+# ---- Inbound Communications ----
+
+class InboundMessageCreate(BaseModel):
+    """Normalized inbound message payload used for database inserts."""
+    id: str
+    channel: str = Field(..., description="sms|email")
+    provider: str = Field(..., description="acs|graph")
+    provider_event_id: str
+    received_at: Optional[str] = None
+    from_address: Optional[str] = None
+    to_address: Optional[str] = None
+    subject: Optional[str] = None
+    body_text: Optional[str] = None
+    body_html: Optional[str] = None
+    attachments_json: Optional[str] = None
+    raw_payload_json: str
+    parse_status: str = "raw_only"
+    parse_error: Optional[str] = None
+
+
+class InboundMessageRecord(InboundMessageCreate):
+    """Inbound message record returned by API."""
+    created_at: Optional[str] = None
+
+
+class AcsSmsEvent(BaseModel):
+    """Subset of ACS/Event Grid SMS event shape."""
+    id: str
+    eventType: str
+    eventTime: Optional[str] = None
+    data: dict
+
+
+class GraphNotification(BaseModel):
+    """Subset of Microsoft Graph notification shape."""
+    subscriptionId: str
+    clientState: Optional[str] = None
+    changeType: Optional[str] = None
+    resource: Optional[str] = None
+    resourceData: Optional[dict] = None

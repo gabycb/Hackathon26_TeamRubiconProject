@@ -51,11 +51,33 @@ class AzureCommConfig:
     connection_string: str = ""
     sender_email: str = "alerts@opsplan.io"
     sender_phone: str = ""
+    eventgrid_topic_key: str = ""
+    sms_webhook_secret: str = ""
 
     def __post_init__(self):
         self.connection_string = os.getenv("AZURE_COMM_CONNECTION_STRING", self.connection_string)
         self.sender_email = os.getenv("AZURE_COMM_SENDER_EMAIL", self.sender_email)
         self.sender_phone = os.getenv("AZURE_COMM_SENDER_PHONE", self.sender_phone)
+        self.eventgrid_topic_key = os.getenv("ACS_EVENTGRID_TOPIC_KEY", self.eventgrid_topic_key)
+        self.sms_webhook_secret = os.getenv("ACS_SMS_WEBHOOK_SECRET", self.sms_webhook_secret)
+
+
+@dataclass
+class GraphConfig:
+    tenant_id: str = ""
+    client_id: str = ""
+    client_secret: str = ""
+    mailbox_user_id: str = ""
+    notification_client_state: str = ""
+    subscription_callback_url: str = ""
+
+    def __post_init__(self):
+        self.tenant_id = os.getenv("GRAPH_TENANT_ID", self.tenant_id)
+        self.client_id = os.getenv("GRAPH_CLIENT_ID", self.client_id)
+        self.client_secret = os.getenv("GRAPH_CLIENT_SECRET", self.client_secret)
+        self.mailbox_user_id = os.getenv("GRAPH_MAILBOX_USER_ID", self.mailbox_user_id)
+        self.notification_client_state = os.getenv("GRAPH_NOTIFICATION_CLIENT_STATE", self.notification_client_state)
+        self.subscription_callback_url = os.getenv("GRAPH_SUBSCRIPTION_CALLBACK_URL", self.subscription_callback_url)
 
 
 @dataclass
@@ -85,16 +107,19 @@ class Settings:
     azure_blob: AzureBlobConfig = field(default_factory=AzureBlobConfig)
     azure_vision: AzureVisionConfig = field(default_factory=AzureVisionConfig)
     azure_comm: AzureCommConfig = field(default_factory=AzureCommConfig)
+    graph: GraphConfig = field(default_factory=GraphConfig)
     census: CensusConfig = field(default_factory=CensusConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
 
     # App settings
     log_level: str = "INFO"
     debug: bool = False
+    inbound_auto_parse: bool = False
 
     def __post_init__(self):
         self.log_level = os.getenv("LOG_LEVEL", self.log_level)
         self.debug = os.getenv("DEBUG", "false").lower() == "true"
+        self.inbound_auto_parse = os.getenv("INBOUND_AUTO_PARSE", "false").lower() == "true"
 
     def validate(self) -> list[str]:
         """Check for missing required configuration. Returns list of issues."""

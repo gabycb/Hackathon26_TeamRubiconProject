@@ -122,6 +122,19 @@ CENSUS_API_KEY=your-census-key-here
 ```
 
 The Azure OpenAI values come from Azure Portal → your OpenAI resource → "Keys and Endpoint."
+Optional inbound communications config:
+
+```
+ACS_EVENTGRID_TOPIC_KEY=...
+ACS_SMS_WEBHOOK_SECRET=...
+GRAPH_TENANT_ID=...
+GRAPH_CLIENT_ID=...
+GRAPH_CLIENT_SECRET=...
+GRAPH_MAILBOX_USER_ID=...
+GRAPH_NOTIFICATION_CLIENT_STATE=...
+GRAPH_SUBSCRIPTION_CALLBACK_URL=...
+INBOUND_AUTO_PARSE=false
+```
 
 ### 4. Initialize database and load data
 
@@ -206,10 +219,11 @@ The app currently runs in **demo mode** with pre-loaded Harvey data. Once the ba
 | Azure OpenAI (GPT-4o) | Powers all 3 agents | Core pipeline |
 | Azure AI Vision | Mobile photo damage assessment | Part 2 |
 | Azure Blob Storage | Photo storage | Part 2 |
-| Azure Communication Services | SMS/email alerts | Weather Sentinel |
+| Azure Communication Services | Inbound SMS webhook events | Inbound communications |
+| Microsoft Graph | Inbound mailbox notifications + email fetch | Inbound communications |
 | Microsoft Entra ID | Authentication | Production |
 
-For the hackathon demo, only Azure OpenAI is required.
+For the hackathon demo, only Azure OpenAI is required. For inbound communications, configure ACS + Graph.
 
 ---
 
@@ -222,9 +236,14 @@ For the hackathon demo, only Azure OpenAI is required.
 | POST | `/api/profiles/build` | Run Construction Profile Agent |
 | POST | `/api/plan/generate` | Run Mission Planning Agent |
 | POST | `/api/chat/{agent_name}` | Side-drawer agent chat |
+| POST | `/api/webhooks/acs/sms` | ACS/Event Grid SMS inbound webhook |
+| POST | `/api/webhooks/graph/email` | Microsoft Graph email notification webhook |
+| POST | `/api/webhooks/graph/email/lifecycle` | Graph subscription lifecycle callback |
+| GET | `/api/inbound/messages` | List normalized inbound messages |
 
 ---
 
 ## Team
 
 **THYNK UNLIMITED** — Team Rubicon Hackathon
+

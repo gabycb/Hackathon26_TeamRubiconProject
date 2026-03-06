@@ -129,7 +129,7 @@ const Spinner = ({ label, estimate }) => {
 // ============================================================
 // TOP BAR
 // ============================================================
-const TopBar = ({ event, chatOpen, onToggleChat }) => (
+const TopBar = ({ event, chatOpen, onToggleChat, inboxOpen, onToggleInbox }) => (
   <div style={{ padding: "10px 20px", background: C.surface, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <div style={{ width: 26, height: 26, borderRadius: 6, background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>O</div>
@@ -138,6 +138,11 @@ const TopBar = ({ event, chatOpen, onToggleChat }) => (
     </div>
     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
       <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 4, background: C.greenBg, color: C.green, fontWeight: 600 }}>Live — Azure OpenAI</span>
+      <button onClick={onToggleInbox} style={{
+        padding: "6px 14px", borderRadius: 6, border: `1px solid ${inboxOpen ? C.blue : C.border}`,
+        background: inboxOpen ? C.blueBg : C.surface, color: inboxOpen ? C.blue : C.textSecondary,
+        fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: font,
+      }}>Inbound Inbox {inboxOpen ? "✕" : ""}</button>
       <button onClick={onToggleChat} style={{
         padding: "6px 14px", borderRadius: 6, border: `1px solid ${chatOpen ? C.accent : C.border}`,
         background: chatOpen ? C.accentBg : C.surface, color: chatOpen ? C.accent : C.textSecondary,
@@ -221,6 +226,39 @@ const ChatDrawer = ({ messages, onSend, agentName }) => {
 // ============================================================
 // STEP 1 — DEFINE EVENT
 // ============================================================
+
+// ============================================================
+// INBOUND INBOX
+// ============================================================
+const InboundInbox = ({ messages, loading, error, onRefresh }) => (
+  <div style={{ width: 360, borderLeft: `1px solid ${C.border}`, background: C.surface, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: font }}>Inbound Inbox</div>
+        <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>ACS SMS + Graph Email</div>
+      </div>
+      <Btn small onClick={onRefresh} disabled={loading}>Refresh</Btn>
+    </div>
+    <div style={{ flex: 1, padding: 12, overflowY: "auto" }}>
+      {loading && <div style={{ fontSize: 12, color: C.textMuted }}>Loading inbound messages...</div>}
+      {!loading && error && <div style={{ fontSize: 12, color: C.red }}>Failed to load: {error}</div>}
+      {!loading && !error && messages.length === 0 && <div style={{ fontSize: 12, color: C.textMuted }}>No inbound messages yet.</div>}
+      {!loading && !error && messages.map((m, idx) => (
+        <Card key={m.id || idx} style={{ marginBottom: 10, padding: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <Badge color={m.channel === "sms" ? C.accent : C.blue} bg={m.channel === "sms" ? C.accentBg : C.blueBg}>{(m.channel || "unknown").toUpperCase()}</Badge>
+            <span style={{ fontSize: 10, color: C.textMuted }}>{m.received_at || m.created_at || "unknown time"}</span>
+          </div>
+          <div style={{ fontSize: 11, color: C.textSecondary, marginBottom: 3 }}>From: <span style={{ color: C.text }}>{m.from_address || "unknown"}</span></div>
+          <div style={{ fontSize: 11, color: C.textSecondary, marginBottom: 3 }}>To: <span style={{ color: C.text }}>{m.to_address || "unknown"}</span></div>
+          {m.subject && <div style={{ fontSize: 11, color: C.textSecondary, marginBottom: 4 }}>Subject: <span style={{ color: C.text }}>{m.subject}</span></div>}
+          <p style={{ fontSize: 11, color: C.textSecondary, margin: 0, lineHeight: 1.5 }}>{(m.body_text || "").slice(0, 220) || "(no preview)"}</p>
+          <div style={{ marginTop: 8, fontSize: 10, color: C.textMuted }}>Parse: {m.parse_status || "raw_only"}</div>
+        </Card>
+      ))}
+    </div>
+  </div>
+);
 const Step1 = ({ onComplete, setLoading, loading }) => {
   const [mode, setMode] = useState("fema"); // fema | location | text
   const [femaNum, setFemaNum] = useState("");
@@ -1056,8 +1094,12 @@ const Step4 = ({ data, step1Data }) => {
 export default function App() {
   const [step, setStep] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [eventLabel, setEventLabel] = useState(null);
+  const [inboundMessages, setInboundMessages] = useState([]);
+  const [inboundLoading, setInboundLoading] = useState(false);
+  const [inboundError, setInboundError] = useState("");
 
   // Data passed between steps
   const [step1Data, setStep1Data] = useState(null);
@@ -1090,9 +1132,34 @@ export default function App() {
     if (stepNum === 2) { setStep3Data(data); setStep(3); }
   };
 
+  const refreshInbound = async () => {
+    setInboundLoading(true);
+    setInboundError("");
+    try {
+      const res = await fetch(API + "/api/inbound/messages?limit=50");
+      if (!res.ok) throw new Error("API " + res.status);
+      const data = await res.json();
+      setInboundMessages(Array.isArray(data.messages) ? data.messages : []);
+    } catch (err) {
+      setInboundError(err.message);
+    } finally {
+      setInboundLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (inboxOpen) refreshInbound();
+  }, [inboxOpen]);
+
   return (
     <div style={{ background: "#EDE8E0", minHeight: "100vh", fontFamily: font }}>
-      <TopBar event={eventLabel} chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} />
+      <TopBar
+        event={eventLabel}
+        chatOpen={chatOpen}
+        onToggleChat={() => setChatOpen(!chatOpen)}
+        inboxOpen={inboxOpen}
+        onToggleInbox={() => setInboxOpen(!inboxOpen)}
+      />
       <WizardSteps current={step} onNav={setStep} />
 
       <div style={{ display: "flex", minHeight: "calc(100vh - 96px)" }}>
@@ -1106,7 +1173,13 @@ export default function App() {
 
         {/* Chat drawer */}
         {chatOpen && <ChatDrawer messages={messages} onSend={handleChat} agentName={agentNames[step]} />}
+        {inboxOpen && <InboundInbox messages={inboundMessages} loading={inboundLoading} error={inboundError} onRefresh={refreshInbound} />}
       </div>
     </div>
   );
 }
+
+
+
+
+
