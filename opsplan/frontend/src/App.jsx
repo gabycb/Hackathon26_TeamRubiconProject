@@ -1310,15 +1310,6 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
 export default function App() {
   const isMobile = useIsMobile();
   const [appMode, setAppMode] = useState("planner");
-
-  // Warn before leaving if agents have run
-  useEffect(() => {
-    const handler = (e) => {
-      if (step1Data) { e.preventDefault(); e.returnValue = ""; }
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [step1Data]); // "planner" | "field"
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState("planning"); // planning | assessment
   const [chatOpen, setChatOpen] = useState(false);
@@ -1338,6 +1329,15 @@ export default function App() {
   const [step1Data, setStep1Data] = useState(null);
   const [step2Data, setStep2Data] = useState(null);
   const [step3Data, setStep3Data] = useState(null);
+
+  // Warn before leaving if agents have run
+  useEffect(() => {
+    const handler = (e) => {
+      if (step1Data) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [step1Data]);
 
   // Chat messages
   const [messages, setMessages] = useState([
