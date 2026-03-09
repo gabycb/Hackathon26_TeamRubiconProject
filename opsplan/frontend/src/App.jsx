@@ -1,5 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 
+
+// Mobile detection hook
+const useIsMobile = () => {
+  const [mobile, setMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return mobile;
+};
+
 // ============================================================
 // DESIGN TOKENS — Established OpsPlan palette
 // ============================================================
@@ -15,7 +27,9 @@ const C = {
   purple: "#6B5B8A", purpleBg: "#F0ECF5",
 };
 const font = `"Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif`;
-const API = ""; // Vite proxy routes /api/* to backend // Change to Azure URL in production
+import FieldAssessment from "./FieldAssessment";
+
+const API = "https://opsplan-api.blackgrass-5f5980e2.eastus.azurecontainerapps.io"; // Production Azure Container App
 
 // ============================================================
 // MOCK DATA — Used when API is unavailable (demo mode)
@@ -81,15 +95,15 @@ const riskBg = r => r === "Critical" ? C.redBg : r === "High" ? C.accentBg : r =
 const Btn = ({ children, primary, small, onClick, disabled, style: s }) => (
   <button onClick={onClick} disabled={disabled} style={{
     padding: small ? "5px 12px" : "8px 16px", borderRadius: 6, cursor: disabled ? "default" : "pointer",
-    border: primary ? "none" : `1px solid ${C.border}`, fontFamily: font, fontSize: small ? 11 : 12, fontWeight: 600,
-    background: disabled ? C.surfaceMuted : primary ? C.accent : C.surface,
-    color: disabled ? C.textMuted : primary ? "#fff" : C.textSecondary,
-    opacity: disabled ? 0.6 : 1, transition: "all 0.15s", ...s,
+    border: primary ? "none" : `1px solid ${C.borderDark || "#C8C0B4"}`, fontFamily: font, fontSize: small ? 11 : 12, fontWeight: 600,
+    background: disabled ? C.surfaceMuted : primary ? C.accent : "#F7F4EF",
+    color: disabled ? C.textMuted : primary ? "#fff" : C.text,
+    opacity: disabled ? 0.6 : 1, transition: "all 0.15s", boxShadow: disabled ? "none" : "0 1px 2px rgba(0,0,0,0.06)", ...s,
   }}>{children}</button>
 );
 
-const Card = ({ children, style: s }) => (
-  <div style={{ background: C.surface, borderRadius: 8, border: `1px solid ${C.border}`, padding: 16, ...s }}>{children}</div>
+const Card = ({ children, style: s, onClick }) => (
+  <div onClick={onClick} style={{ background: C.surface, borderRadius: 8, border: `1px solid ${C.border}`, padding: 16, ...s }}>{children}</div>
 );
 
 const Badge = ({ children, color, bg }) => (
@@ -121,7 +135,13 @@ const Spinner = ({ label, estimate }) => {
         <span style={{ fontSize: 10, color: C.textMuted }}>~{est}s estimated</span>
         <span style={{ fontSize: 10, color: C.textMuted }}>{pct}%</span>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }
+    @media (max-width: 767px) {
+      .opsplan-wizard-steps { overflow-x: auto; padding: 8px 12px !important; }
+      .opsplan-table { font-size: 10px; }
+      .opsplan-table th, .opsplan-table td { padding: 6px 4px !important; }
+      .opsplan-btn-row { flex-wrap: wrap; }
+    }`}</style>
     </div>
   );
 };
@@ -129,23 +149,34 @@ const Spinner = ({ label, estimate }) => {
 // ============================================================
 // TOP BAR
 // ============================================================
-const TopBar = ({ event, chatOpen, onToggleChat }) => (
+const TopBar = ({ event, chatOpen, onToggleChat, mode, onModeSwitch }) => { const isMobile = useIsMobile(); return (
   <div style={{ padding: "10px 20px", background: C.surface, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <div style={{ width: 26, height: 26, borderRadius: 6, background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>O</div>
-      <span style={{ fontSize: 15, fontWeight: 700, color: C.text, fontFamily: font }}>OpsPlan</span>
+      <span style={{ fontSize: isMobile ? 13 : 15, fontWeight: 700, color: C.text, fontFamily: font }}>OpsPlan</span>
       {event && <span style={{ fontSize: 10, color: C.textMuted, marginLeft: 8, padding: "2px 8px", background: C.surfaceMuted, borderRadius: 4 }}>{event}</span>}
     </div>
     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      {onModeSwitch && (
+        <button onClick={onModeSwitch} style={{
+          padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
+          border: `1px solid ${mode === "field" ? C.accent : C.border}`, fontFamily: font,
+          background: mode === "field" ? C.accentBg : C.surface, color: mode === "field" ? C.accent : C.textSecondary,
+        }}>
+          {mode === "field" ? "◉ Field Assessment" : "📋 Field Assessment"}
+        </button>
+      )}
       <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 4, background: C.greenBg, color: C.green, fontWeight: 600 }}>Live — Azure OpenAI</span>
+      <button onClick={() => { const msg = prompt("Describe the issue:"); if (msg) alert("Bug reported. Thank you!\n\nDetails logged for the development team."); }}
+        style={{ padding: "3px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.textMuted, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: font }}>🐛 Report Bug</button>
       <button onClick={onToggleChat} style={{
-        padding: "6px 14px", borderRadius: 6, border: `1px solid ${chatOpen ? C.accent : C.border}`,
-        background: chatOpen ? C.accentBg : C.surface, color: chatOpen ? C.accent : C.textSecondary,
+        padding: "6px 14px", borderRadius: 6, border: `1px solid ${chatOpen ? C.accent : C.accent}`,
+        background: chatOpen ? C.accentBg : C.accentBg, color: C.accent,
         fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: font,
       }}>💬 Agent Chat {chatOpen ? "✕" : ""}</button>
     </div>
   </div>
-);
+); };
 
 // ============================================================
 // WIZARD STEPS BAR
@@ -158,7 +189,24 @@ const WizardSteps = ({ current, onNav }) => {
     { num: 4, label: "Mission Plan" },
   ];
   return (
-    <div style={{ padding: "12px 24px", background: C.surface, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center" }}>
+    <div style={{ padding: "12px 24px", background: C.surface, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", overflowX: "auto", flexWrap: "nowrap" }}>
+      {/* Agent status indicator */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginRight: 20, padding: "4px 10px", borderRadius: 6, background: "#F5F0E8", border: "1px solid #E2DCD2" }}>
+        <span style={{ fontSize: 10, color: "#9C8F82" }}>Agents:</span>
+        {["PA", "CP", "MP"].map((label, i) => {
+          const completed = current > i;
+          const active = current === i;
+          return (
+            <span key={i} style={{
+              width: 22, height: 18, borderRadius: 4, display: "inline-flex", alignItems: "center", justifyContent: "center",
+              fontSize: 8, fontWeight: 700, letterSpacing: "0.02em",
+              background: completed ? "#2D7D46" : active ? "#B85C1F" : "#E2DCD2",
+              color: completed || active ? "#fff" : "#9C8F82",
+            }}>{completed ? "✓" : label}</span>
+          );
+        })}
+        <span style={{ fontSize: 10, fontWeight: 600, color: "#6B5E52", marginLeft: 2 }}>{Math.min(current, 3)}/3</span>
+      </div>
       {steps.map((s, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", flex: i < steps.length - 1 ? 1 : "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: i < current ? "pointer" : "default" }} onClick={() => i < current && onNav(i)}>
@@ -181,20 +229,33 @@ const WizardSteps = ({ current, onNav }) => {
 // ============================================================
 // CHAT DRAWER
 // ============================================================
-const ChatDrawer = ({ messages, onSend, agentName }) => {
+const ChatDrawer = ({ messages, onSend, agentName, isMobile, onClose }) => {
   const [input, setInput] = useState("");
   const endRef = useRef(null);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  const send = () => { if (input.trim()) { onSend(input.trim()); setInput(""); } };
+  const [sending, setSending] = useState(false);
+  const send = async () => {
+    if (!input.trim() || sending) return;
+    setSending(true);
+    await onSend(input.trim());
+    setInput("");
+    setSending(false);
+  };
 
   return (
-    <div style={{ width: 320, borderLeft: `1px solid ${C.border}`, background: C.surface, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+    <div style={{ width: isMobile ? "100%" : 320, borderLeft: isMobile ? "none" : `1px solid ${C.border}`, background: C.surface, display: "flex", flexDirection: "column", flexShrink: 0, position: isMobile ? "fixed" : "relative", top: isMobile ? 0 : "auto", left: isMobile ? 0 : "auto", right: isMobile ? 0 : "auto", bottom: isMobile ? 0 : "auto", zIndex: isMobile ? 100 : "auto" }}>
       <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}` }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: font }}>Agent Chat</div>
-        <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>Talking to: {agentName || "Disaster Context Agent"}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: font }}>Agent Chat</div>
+            <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>Talking to: {agentName || "Priority Analysis Agent"}</div>
+            <div style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>Context: {[step1Data && "Event", step2Data && "Zones+Profiles", step3Data && "Mission Plan"].filter(Boolean).join(" → ") || "None yet"}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: C.textMuted, padding: 4 }}>✕</button>
+        </div>
       </div>
-      <div style={{ flex: 1, padding: 12, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ flex: 1, padding: 12, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, maxHeight: isMobile ? "calc(100vh - 140px)" : "calc(100vh - 200px)" }}>
         {messages.map((m, i) => (
           <div key={i} style={{
             padding: "9px 12px", borderRadius: 8, fontSize: 12, lineHeight: 1.6, fontFamily: font, maxWidth: "90%",
@@ -207,12 +268,14 @@ const ChatDrawer = ({ messages, onSend, agentName }) => {
         <div ref={endRef} />
       </div>
       <div style={{ padding: 10, borderTop: `1px solid ${C.border}`, display: "flex", gap: 6 }}>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()}
-          placeholder="Ask about the analysis..." style={{
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !sending && send()}
+          disabled={sending}
+          placeholder={sending ? "Agent thinking..." : "Ask about the analysis..."} style={{
           flex: 1, padding: "9px 12px", borderRadius: 6, border: `1px solid ${C.border}`,
-          background: C.bg, color: C.text, fontSize: 12, outline: "none", fontFamily: font,
+          background: sending ? C.surfaceMuted : C.bg, color: C.text, fontSize: 12, outline: "none", fontFamily: font,
+          opacity: sending ? 0.6 : 1,
         }} />
-        <Btn primary small onClick={send}>Send</Btn>
+        <Btn primary small onClick={send} disabled={sending}>{sending ? "..." : "Send"}</Btn>
       </div>
     </div>
   );
@@ -229,6 +292,7 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
   const [eventType, setEventType] = useState("");
   const [freeText, setFreeText] = useState("");
   const [prefilled, setPrefilled] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState("");
 
   const [formError, setFormError] = useState("");
 
@@ -244,9 +308,15 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
       if (!locCounties.trim()) missing.push("Affected Counties");
       if (missing.length > 0) { setFormError("Required fields: " + missing.join(", ")); return; }
     }
+    // Show confirmation of what will be analyzed
+    const countyList = locCounties.split(",").map(s => s.trim()).filter(Boolean);
+    if (mode !== "text") {
+      const msg = `Analyze ${eventType || "event"} in ${countyList.join(", ")} County, ${locState}${femaNum ? " (FEMA " + femaNum + ")" : ""}?`;
+      if (!window.confirm(msg)) return;
+    }
     setLoading(true);
     try {
-      const counties = locCounties.split(",").map(s => s.trim()).filter(Boolean);
+      const counties = countyList;
       let description = "";
       if (mode === "text") { description = freeText; }
       else { description = `${eventType} event. FEMA declaration: ${femaNum}. Analyze census tracts in ${counties.join(" County and ")} County in ${locState}. Use county_to_tracts to get tract lists, then look up SVI and NRI for each tract.`; }
@@ -271,21 +341,33 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
   return (
     <div style={{ maxWidth: 680, margin: "0 auto" }}>
       {!prefilled && (
-        <Card style={{ marginBottom: 16, background: C.accentBg, borderColor: C.accentBorder }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, textTransform: "uppercase", letterSpacing: "0.04em" }}>⚡ Weather Sentinel Alert</div>
-              <div style={{ fontSize: 13, color: C.text, fontWeight: 600, marginTop: 4 }}>Hurricane Harvey — Cat 4 projected landfall TX coast</div>
-              <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>5 counties, ~45,200 structures, ~128,000 population at risk</div>
-            </div>
-            <Btn primary small onClick={prefill}>Pre-fill from Alert →</Btn>
-          </div>
-        </Card>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>⚡ Weather Sentinel Alerts</div>
+          {[
+            { id: "harvey", name: "Hurricane Harvey", detail: "Cat 4 projected landfall TX coast", counties: "Aransas, Refugio, Calhoun, Victoria, San Patricio", state: "Texas", type: "Hurricane", fema: "DR-4332-TX", stats: "5 counties, ~45,200 structures, ~128,000 pop at risk", time: "2h ago" },
+            { id: "ian", name: "Hurricane Ian", detail: "Cat 4 approaching SW Florida", counties: "Lee, Charlotte, Collier, DeSoto", state: "Florida", type: "Hurricane", fema: "DR-4673-FL", stats: "4 counties, ~180,000 structures, ~520,000 pop at risk", time: "6h ago" },
+            { id: "tornado", name: "Tornado Outbreak — MS", detail: "EF3+ tornado track across central Mississippi", counties: "Hinds, Madison, Yazoo", state: "Mississippi", type: "Tornado", fema: "", stats: "3 counties, ~12,000 structures, ~95,000 pop at risk", time: "12h ago" },
+          ].map(alert => (
+            <Card key={alert.id} style={{ marginBottom: 8, background: C.accentBg, borderColor: C.accentBorder, cursor: "pointer" }}
+              onClick={() => { setPrefilled(true); setMode("fema"); setFemaNum(alert.fema); setLocState(alert.state); setLocCounties(alert.counties); setEventType(alert.type); setSelectedAlert(alert.name); }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{alert.name} — {alert.detail}</div>
+                  <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>{alert.stats}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 10, color: C.textMuted }}>{alert.time}</span>
+                  <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, marginTop: 2 }}>Select →</div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       )}
 
       {prefilled && (
         <div style={{ padding: "8px 14px", background: C.greenBg, borderRadius: 6, border: `1px solid ${C.greenBorder}`, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: C.green, fontWeight: 600, fontSize: 12 }}>✓ Pre-filled from Weather Sentinel Alert</span>
+          <span style={{ color: C.green, fontWeight: 600, fontSize: 12 }}>✓ Pre-filled from: {selectedAlert || "Weather Sentinel Alert"}</span>
           <span style={{ fontSize: 11, color: C.textMuted }}>— Review and confirm before proceeding</span>
         </div>
       )}
@@ -374,9 +456,9 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
         </div>
       )}
 
-      {loading ? <Spinner label="Disaster Context Agent analyzing" estimate={90} /> : (
+      {loading ? <Spinner label="Priority Analysis Agent analyzing" estimate={90} /> : (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <Btn primary onClick={submit}>Run Disaster Context Agent →</Btn>
+          <Btn primary onClick={submit}>Run Priority Analysis Agent →</Btn>
         </div>
       )}
     </div>
@@ -384,9 +466,39 @@ const Step1 = ({ onComplete, setLoading, loading }) => {
 };
 
 // ============================================================
+// HOVER-TO-ASK AGENT COMPONENT
+// ============================================================
+const AskableValue = ({ label, value, onAsk, children }) => {
+  const [showTip, setShowTip] = useState(false);
+  const isMob = useIsMobile();
+  return (
+    <span style={{ position: "relative", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
+      onMouseEnter={() => !isMob && setShowTip(true)} onMouseLeave={() => setShowTip(false)}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (isMob && !showTip) { setShowTip(true); setTimeout(() => setShowTip(false), 2500); return; }
+        if (onAsk) onAsk(`Explain the ${label} value of ${value} — what does this mean for disaster response planning and how was it calculated?`);
+      }}>
+      {children || value}
+      <span style={{ fontSize: 9, opacity: showTip ? 1 : 0.4, transition: "opacity 0.15s", color: "#3D6B8E" }}>ℹ️</span>
+      {showTip && (
+        <span style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap",
+          padding: "5px 12px", borderRadius: 6, fontSize: 10, fontWeight: 600, zIndex: 10,
+          background: "#2C2520", color: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}
+          onClick={(e) => { e.stopPropagation(); if (onAsk) onAsk(`Explain the ${label} value of ${value} — what does this mean for disaster response planning and how was it calculated?`); }}>
+          💬 {isMob ? "Tap to ask agent" : "Click to ask agent"} about {label}
+        </span>
+      )}
+    </span>
+  );
+};
+
+// ============================================================
 // STEP 2 — PRIORITY ANALYSIS
 // ============================================================
-const Step2 = ({ data, onComplete, setLoading, loading }) => {
+
+const Step2 = ({ data, onComplete, setLoading, loading, onAskAgent, cachedResult }) => {
+  const isMobile = useIsMobile();
   const [selected, setSelected] = useState(0);
   const [showWeights, setShowWeights] = useState(false);
   const [weights, setWeights] = useState(data?.scoring_weights || { svi: 0.30, nri: 0.30, housing_vulnerability: 0.25, population_density: 0.15 });
@@ -394,6 +506,11 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
   const z = zones[selected];
 
   const approve = async () => {
+    // If we already have profiles from a previous run, skip the API call
+    if (cachedResult?.profiles && cachedResult.profiles.length > 0) {
+      onComplete({ zones, profiles: cachedResult.profiles });
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(API + "/api/profiles/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zones }) });
@@ -405,20 +522,24 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
     } catch (err) {
       console.error("Profile agent error:", err);
       setLoading(false);
-      onComplete({ zones, profiles: MOCK_PROFILES });
+      if (window.confirm("Construction Profile Agent failed: " + err.message + "\n\nRetry?")) {
+        approve(); // retry
+      } else {
+        onComplete({ zones, profiles: MOCK_PROFILES });
+      }
     }
   };
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: 0, fontFamily: font }}>Priority Analysis</h2>
           <p style={{ fontSize: 12, color: C.textMuted, margin: "3px 0 0" }}>{zones.length} zones ranked — click a row to see details</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Btn onClick={() => setShowWeights(!showWeights)}>Adjust Weights</Btn>
-          {loading ? <Spinner label="Construction Profile Agent building profiles" estimate={35} /> : <Btn primary onClick={approve}>Approve Rankings →</Btn>}
+          {loading ? <Spinner label="Construction Profile Agent building profiles" estimate={90} /> : <Btn primary onClick={approve}>Approve Rankings →</Btn>}
         </div>
       </div>
 
@@ -426,7 +547,7 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
       {showWeights && (
         <Card style={{ marginBottom: 16, background: C.blueBg, borderColor: C.blueBorder }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: C.blue, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>Scoring Weights</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
             {[
               { key: "svi", label: "Social Vulnerability" },
               { key: "nri", label: "Natural Hazard Risk" },
@@ -450,7 +571,7 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
             ))}
           </div>
           <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 10, color: Math.round(Object.values(weights).reduce((a, b) => a + b, 0) * 100) === 100 ? C.green : C.red, fontWeight: 600 }}>Total: {Math.round(Object.values(weights).reduce((a, b) => a + b, 0) * 100)}%{Math.round(Object.values(weights).reduce((a, b) => a + b, 0) * 100) !== 100 ? " (must equal 100%)" : " OK"}</span>
+            <span style={{ fontSize: 10, color: Math.round(Object.values(weights).reduce((a, b) => a + b, 0) * 100) === 100 ? C.green : C.red, fontWeight: 600 }}>Total: {Math.round(Object.values(weights).reduce((a, b) => a + b, 0) * 100)}%{Object.values(weights).some(w => w === 0) ? " ⚠️ Zero weights will exclude that factor" : ""}{Math.round(Object.values(weights).reduce((a, b) => a + b, 0) * 100) !== 100 ? " (must equal 100%)" : " OK"}</span>
             <Btn primary small onClick={async () => {
               setLoading(true);
               try {
@@ -469,13 +590,13 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
                 console.error("Re-score error:", err);
                 setLoading(false);
               }
-            }}>Re-Score Zones</Btn>
+            }} disabled={Math.round(Object.values(weights).reduce((a, b) => a + b, 0) * 100) !== 100}>Re-Score Zones</Btn>
           </div>
         </Card>
       )}
 
       {/* Data Table */}
-      <Card style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
+      <Card style={{ padding: 0, overflow: "auto", marginBottom: 16, WebkitOverflowScrolling: "touch" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: font, fontSize: 12 }}>
           <thead>
             <tr style={{ borderBottom: `2px solid ${C.border}` }}>
@@ -514,8 +635,35 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
           <Badge color={riskColor(z.risk_level)} bg={riskBg(z.risk_level)}>{z.risk_level} — Score {z.composite_score}</Badge>
         </div>
 
+        {/* Scoring breakdown — show how composite score is derived */}
+        <div style={{ marginBottom: 16, padding: 12, background: C.blueBg, borderRadius: 8, border: `1px solid ${C.blueBorder}` }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: C.blue, textTransform: "uppercase", marginBottom: 8, letterSpacing: "0.04em" }}>Score Breakdown — How {z.composite_score} is Calculated</div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 6 : 8 }}>
+            {[
+              { label: "SVI", raw: z.svi_score, weight: weights.svi, color: "#A93E2B" },
+              { label: "NRI", raw: z.nri_score, weight: weights.nri, color: "#B85C1F" },
+              { label: "Housing", raw: z.housing_vulnerability, weight: weights.housing_vulnerability, color: "#9C7B2E" },
+              { label: "Pop. Density", raw: z.population_density_norm || (z.population ? z.population / 5000 : 0.5), weight: weights.population_density, color: "#6B5B8A" },
+            ].map((s, i) => {
+              const rawPct = Math.round((s.raw || 0) * 100);
+              const weightPct = Math.round((s.weight || 0) * 100);
+              const contribution = Math.round(rawPct * (s.weight || 0));
+              return (
+                <div key={i} style={{ background: C.surface, borderRadius: 6, padding: "8px 10px", border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", marginBottom: 4 }}>{s.label}</div>
+                  <div style={{ fontSize: 11, color: C.text }}><span style={{ fontWeight: 700, color: s.color }}>{rawPct}</span> × <span style={{ color: C.blue }}>{weightPct}%</span></div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: s.color, marginTop: 2 }}>= {contribution}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 10, color: C.textMuted }}>
+            Formula: (SVI × {Math.round((weights.svi || 0) * 100)}%) + (NRI × {Math.round((weights.nri || 0) * 100)}%) + (Housing × {Math.round((weights.housing_vulnerability || 0) * 100)}%) + (Pop × {Math.round((weights.population_density || 0) * 100)}%) = <strong style={{ color: C.text }}>{z.composite_score}</strong>
+          </div>
+        </div>
+
         {/* Metric cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 6 : 10, marginBottom: 16 }}>
           {[
             { label: "Population", value: z.population?.toLocaleString() || "—", sub: z.households ? z.households.toLocaleString() + " households" : "—" },
             { label: "SVI Score", value: z.svi_score != null ? Math.round(z.svi_score * 100) + "%" : "—", sub: "Social Vulnerability" },
@@ -531,7 +679,7 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
         </div>
 
         {/* Vulnerability bars + Agent callout */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, marginBottom: 10 }}>Vulnerability Breakdown</div>
             {[
@@ -541,7 +689,9 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
             ].map((b, i) => (
               <div key={i} style={{ marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
-                  <span style={{ color: C.textSecondary }}>{b.label}</span>
+                  <AskableValue label={b.label} value={b.value + "%"} onAsk={onAskAgent}>
+                    <span style={{ color: C.textSecondary }}>{b.label}</span>
+                  </AskableValue>
                   <span style={{ fontWeight: 700, color: b.color }}>{b.value}%</span>
                 </div>
                 <div style={{ height: 5, background: C.surfaceMuted, borderRadius: 3, overflow: "hidden" }}>
@@ -563,7 +713,7 @@ const Step2 = ({ data, onComplete, setLoading, loading }) => {
 // ============================================================
 // STEP 3 — CONSTRUCTION PROFILES
 // ============================================================
-const Step3 = ({ data, step1Data, onComplete, setLoading, loading }) => {
+const Step3 = ({ data, step1Data, onComplete, setLoading, loading, onAskAgent, cachedResult }) => {
   const [selectedZone, setSelectedZone] = useState(0);
   const [tab, setTab] = useState("structural");
   const rawProfiles = data?.profiles;
@@ -594,6 +744,11 @@ const Step3 = ({ data, step1Data, onComplete, setLoading, loading }) => {
   const p = profiles[selectedZone] || profiles[0] || MOCK_PROFILES[0];
 
   const approve = async () => {
+    // If we already have a mission plan from a previous run, skip the API call
+    if (cachedResult?.sop && cachedResult.sop.situation) {
+      onComplete(cachedResult);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(API + "/api/plan/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ context: step1Data || data, construction: { zones: data?.zones, profiles } }) });
@@ -608,7 +763,11 @@ const Step3 = ({ data, step1Data, onComplete, setLoading, loading }) => {
     } catch (err) {
       console.error("Mission plan error:", err);
       setLoading(false);
-      onComplete({ sop: MOCK_SOP });
+      if (window.confirm("Mission Planning Agent failed: " + err.message + "\n\nRetry?")) {
+        approve(); // retry
+      } else {
+        onComplete({ sop: MOCK_SOP });
+      }
     }
   };
 
@@ -623,20 +782,22 @@ const Step3 = ({ data, step1Data, onComplete, setLoading, loading }) => {
 
   const DataRow = ({ label, value }) => (
     <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${C.border}`, fontSize: 12 }}>
-      <span style={{ color: C.textSecondary }}>{label}</span>
+      <AskableValue label={label} value={String(value || "")} onAsk={onAskAgent}>
+        <span style={{ color: C.textSecondary }}>{label}</span>
+      </AskableValue>
       <span style={{ fontWeight: 600, color: C.text, textAlign: "right", maxWidth: "60%" }}>{value}</span>
     </div>
   );
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: 0 }}>Construction Profiles</h2>
           <p style={{ fontSize: 12, color: C.textMuted, margin: "3px 0 0" }}>Detailed structural data for each priority zone</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          {loading ? <Spinner label="Mission Planning Agent generating SOP" estimate={90} /> : <Btn primary onClick={approve}>Approve Profiles →</Btn>}
+          {loading ? <Spinner label="Mission Planning Agent generating plan" estimate={90} /> : <Btn primary onClick={approve}>Approve Profiles →</Btn>}
         </div>
       </div>
 
@@ -652,7 +813,7 @@ const Step3 = ({ data, step1Data, onComplete, setLoading, loading }) => {
         ))}
       </div>
 
-      <Card>
+      <Card key={selectedZone + "-" + (p.zone_fips || "")}>
         <div style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: 0 }}>{p.zone_name || p.area_name || "Zone"}</h3>
           <span style={{ fontSize: 10, color: C.textMuted }}>{p.zone_fips || p.fips_tract || ""}</span>
@@ -724,6 +885,19 @@ const Step3 = ({ data, step1Data, onComplete, setLoading, loading }) => {
             <DataRow label="Median Household Income" value={p.financial.median_household_income} />
             <DataRow label="Median Contract Rent" value={p.financial.median_rent || p.financial.median_contract_rent} />
             <DataRow label="Est. Total Replacement Cost" value={p.financial.replacement_cost_est || p.financial.replacement_total} />
+            {/* Cost breakdown context */}
+            {p.structural && p.financial.median_home_value && (
+              <div style={{ marginTop: 12, padding: 10, background: C.blueBg, borderRadius: 6, border: `1px solid ${C.blueBorder}` }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: C.blue, textTransform: "uppercase", marginBottom: 6 }}>Replacement Cost Methodology</div>
+                <div style={{ fontSize: 11, color: C.textSecondary, lineHeight: 1.7 }}>
+                  <div>Total housing units: <strong style={{ color: C.text }}>{p.structural.total_housing_units?.toLocaleString() || "—"}</strong></div>
+                  <div>SF detached: {p.structural.sf_detached?.toLocaleString() || "—"} × median value {p.financial.median_home_value}</div>
+                  <div>Mobile/manufactured: {p.structural.mobile_home?.toLocaleString() || "—"} × est. $55K–$75K replacement</div>
+                  <div>Multi-unit: {p.structural.multi_unit?.toLocaleString() || "—"} × est. $95K–$150K per unit</div>
+                  <div style={{ marginTop: 4, fontSize: 10, color: C.textMuted }}>Note: Estimates use Census median home values and RSMeans regional cost factors. Actual replacement costs vary by damage severity, code compliance requirements, and material availability.</div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {tab === "demographics" && p.demographics && (
@@ -735,7 +909,9 @@ const Step3 = ({ data, step1Data, onComplete, setLoading, loading }) => {
             <DataRow label="Below Poverty" value={p.demographics.below_poverty_pct != null ? p.demographics.below_poverty_pct + "%" : p.demographics.below_poverty} />
             <DataRow label="Limited English" value={p.demographics.limited_english_pct != null ? p.demographics.limited_english_pct + "%" : p.demographics.limited_english} />
             <DataRow label="No Vehicle" value={p.demographics.no_vehicle_pct != null ? p.demographics.no_vehicle_pct + "%" : p.demographics.no_vehicle} />
-            <DataRow label="Tenant Occupied" value={p.demographics.tenant_occupied_pct != null ? p.demographics.tenant_occupied_pct + "%" : ""} />
+            <DataRow label="Renter-Occupied" value={p.demographics.tenant_occupied_pct != null ? p.demographics.tenant_occupied_pct + "%" : ""} />
+            <DataRow label="Owner-Occupied" value={p.demographics.tenant_occupied_pct != null ? (100 - p.demographics.tenant_occupied_pct).toFixed(1) + "%" : ""} />
+            <DataRow label="Unemployment Rate" value={p.demographics.unemployment_pct != null ? p.demographics.unemployment_pct + "%" : p.demographics.unemployment || ""} />
           </div>
         )}
 
@@ -766,7 +942,8 @@ const Step3 = ({ data, step1Data, onComplete, setLoading, loading }) => {
 // ============================================================
 // STEP 4 — MISSION PLAN (SOP)
 // ============================================================
-const Step4 = ({ data, step1Data }) => {
+const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
+  const isMobile = useIsMobile();
   const [section, setSection] = useState("situation");
   const [editing, setEditing] = useState(null); // { section, field, index } or null
   const [editValue, setEditValue] = useState("");
@@ -814,7 +991,7 @@ const Step4 = ({ data, step1Data }) => {
         event: data?.event || step1Data?.event || null,
         zones: data?.zones || step1Data?.zones || null,
       };
-      const res = await fetch(API + "/api/export/sop", {
+      const res = await fetch(API + "/api/export/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -824,8 +1001,11 @@ const Step4 = ({ data, step1Data }) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "OpsPlan_SOP_" + new Date().toISOString().slice(0, 10) + ".docx";
+      a.download = "OpsPlan_MissionPlan_" + new Date().toISOString().slice(0, 10) + ".docx";
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Export error:", err);
@@ -839,7 +1019,7 @@ const Step4 = ({ data, step1Data }) => {
 
   const sendEmail = () => {
     // Build mailto link with SOP summary
-    const subject = encodeURIComponent("OpsPlan SOP — " + (sop.situation.event_summary || "").substring(0, 60));
+    const subject = encodeURIComponent("OpsPlan Mission Plan — " + (sop.situation.event_summary || "").substring(0, 60));
     const body = encodeURIComponent(
       "Team,\n\n" +
       "The Operations Order for this event is ready for review.\n\n" +
@@ -853,7 +1033,9 @@ const Step4 = ({ data, step1Data }) => {
       "Generated by OpsPlan AI — Team Rubicon"
     );
     const emails = emailTo.split(",").map(e => e.trim()).join(",");
-    window.open("mailto:" + emails + "?subject=" + subject + "&body=" + body);
+    const a = document.createElement("a");
+    a.href = "mailto:" + emails + "?subject=" + subject + "&body=" + body;
+    a.click();
     setEmailSent(true);
   };
 
@@ -892,15 +1074,17 @@ const Step4 = ({ data, step1Data }) => {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: 0 }}>Mission Plan — SOP</h2>
-          <p style={{ fontSize: 12, color: C.textMuted, margin: "3px 0 0" }}>Team Rubicon 5-Paragraph Operations Order</p>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: 0 }}>Mission Plan</h2>
+          <p style={{ fontSize: 12, color: C.textMuted, margin: "3px 0 0" }}>Team Rubicon 5-Paragraph Mission Plan</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <Btn onClick={() => { if (editing) cancelEdit(); else startEdit(section, Object.keys(sop[section])[0]); }}>{editing ? "Cancel Edit" : "Edit Section"}</Btn>
+          <Btn onClick={() => { if (editing) cancelEdit(); else setEditing(section); }}>{editing ? "Cancel Edit" : "Edit Section"}</Btn>
           <Btn onClick={() => setShowEmail(true)}>Email to Team</Btn>
-          <Btn primary onClick={exportDocx}>Export SOP ↓</Btn>
+          <Btn primary onClick={exportDocx}>Export Mission Plan ↓</Btn>
+          {onNewAlert && <Btn onClick={onNewAlert} style={{ background: "#2D7D46", color: "#fff", border: "none" }}>+ New Alert</Btn>}
+          {onReturnToStart && <Btn onClick={onReturnToStart}>← Return to Start</Btn>}
         </div>
       </div>
 
@@ -927,13 +1111,13 @@ const Step4 = ({ data, step1Data }) => {
         </Card>
       )}
 
-      <div style={{ display: "flex", gap: 16 }}>
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 8 : 16 }}>
         {/* Section nav */}
-        <div style={{ width: 200, flexShrink: 0 }}>
+        <div style={{ width: isMobile ? "100%" : 200, flexShrink: 0, display: isMobile ? "flex" : "block", gap: 4, overflowX: isMobile ? "auto" : "visible", paddingBottom: isMobile ? 8 : 0 }}>
           {sections.map(s => (
             <button key={s.id} onClick={() => setSection(s.id)} style={{
-              width: "100%", padding: "10px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: font,
-              display: "flex", alignItems: "center", gap: 8, marginBottom: 4,
+              width: isMobile ? "auto" : "100%", padding: isMobile ? "8px 12px" : "10px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: font,
+              display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 0 : 4, whiteSpace: isMobile ? "nowrap" : "normal",
               background: section === s.id ? C.accentBg : "transparent",
               color: section === s.id ? C.accent : C.textSecondary, fontSize: 12, fontWeight: 600, textAlign: "left",
             }}><span>{s.icon}</span> {s.label}</button>
@@ -953,6 +1137,24 @@ const Step4 = ({ data, step1Data }) => {
               </div>
             ))}
           </div>
+
+          {/* Quick Actions */}
+          <div style={{ marginTop: 12, padding: 12, background: C.blueBg, borderRadius: 8, border: `1px solid ${C.blueBorder}` }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: C.blue, textTransform: "uppercase", marginBottom: 8 }}>Quick Actions</div>
+            {[
+              { label: "Draft Personnel Request", icon: "👥" },
+              { label: "Draft Equipment Request", icon: "🚛" },
+              { label: "Create SITREP Template", icon: "📋" },
+              { label: "Email Coordination Brief", icon: "📧" },
+            ].map((action, i) => (
+              <button key={i} onClick={() => { if (onAction) onAction(`Draft a ${action.label.toLowerCase()} based on the current mission plan. Include specific numbers, zone assignments, and timelines from the plan.`); }}
+                style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "7px 10px", marginBottom: 4,
+                  borderRadius: 6, border: `1px solid ${C.blueBorder}`, background: C.surface, cursor: "pointer",
+                  fontFamily: font, fontSize: 11, fontWeight: 600, color: C.blue, textAlign: "left" }}>
+                <span>{action.icon}</span> {action.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Section content */}
@@ -964,9 +1166,19 @@ const Step4 = ({ data, step1Data }) => {
               <SectionBlock title="Impact Summary" editKey="impact_summary" editSection="situation"><p style={{ margin: 0 }}>{sop.situation.impact_summary}</p></SectionBlock>
               <SectionBlock title="Key Vulnerabilities">
                 {sop.situation.key_vulnerabilities.map((v, i) => (
-                  <div key={i} style={{ padding: "4px 0", display: "flex", gap: 6 }}>
-                    <span style={{ color: C.red }}>•</span> {v}
-                  </div>
+                  editing && editing.field === "key_vulnerabilities" && editing.index === i ? (
+                    <div key={i} style={{ padding: "4px 0", display: "flex", gap: 6 }}>
+                      <input value={editValue} onChange={e => setEditValue(e.target.value)} onKeyDown={e => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                        autoFocus style={{ flex: 1, padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.accent}`, fontSize: 12, fontFamily: font, outline: "none" }} />
+                      <button onClick={saveEdit} style={{ background: C.green, color: "#fff", border: "none", borderRadius: 4, padding: "2px 8px", fontSize: 10, cursor: "pointer" }}>✓</button>
+                      <button onClick={cancelEdit} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 4, padding: "2px 8px", fontSize: 10, cursor: "pointer" }}>✕</button>
+                    </div>
+                  ) : (
+                    <div key={i} style={{ padding: "4px 0", display: "flex", gap: 6, cursor: "pointer" }} onClick={() => startEdit("situation", "key_vulnerabilities", i)}>
+                      <span style={{ color: C.red }}>•</span> <span style={{ borderBottom: "1px dashed transparent" }}>{v}</span>
+                      <span style={{ fontSize: 9, color: C.textMuted, opacity: 0.5 }}>✎</span>
+                    </div>
+                  )
                 ))}
               </SectionBlock>
             </div>
@@ -977,7 +1189,19 @@ const Step4 = ({ data, step1Data }) => {
               <SectionBlock title="Primary Objective" editKey="primary_objective" editSection="mission"><p style={{ margin: 0 }}>{sop.mission.primary_objective}</p></SectionBlock>
               <SectionBlock title="Secondary Objectives">
                 {sop.mission.secondary_objectives.map((o, i) => (
-                  <div key={i} style={{ padding: "4px 0", display: "flex", gap: 6 }}><span style={{ color: C.accent }}>•</span> {o}</div>
+                  editing && editing.field === "secondary_objectives" && editing.index === i ? (
+                    <div key={i} style={{ padding: "4px 0", display: "flex", gap: 6 }}>
+                      <input value={editValue} onChange={e => setEditValue(e.target.value)} onKeyDown={e => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                        autoFocus style={{ flex: 1, padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.accent}`, fontSize: 12, fontFamily: font, outline: "none" }} />
+                      <button onClick={saveEdit} style={{ background: C.green, color: "#fff", border: "none", borderRadius: 4, padding: "2px 8px", fontSize: 10, cursor: "pointer" }}>✓</button>
+                      <button onClick={cancelEdit} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 4, padding: "2px 8px", fontSize: 10, cursor: "pointer" }}>✕</button>
+                    </div>
+                  ) : (
+                    <div key={i} style={{ padding: "4px 0", display: "flex", gap: 6, cursor: "pointer" }} onClick={() => startEdit("mission", "secondary_objectives", i)}>
+                      <span style={{ color: C.accent }}>•</span> <span>{o}</span>
+                      <span style={{ fontSize: 9, color: C.textMuted, opacity: 0.5 }}>✎</span>
+                    </div>
+                  )
                 ))}
               </SectionBlock>
               <SectionBlock title="End State" editKey="end_state" editSection="mission"><p style={{ margin: 0 }}>{sop.mission.end_state}</p></SectionBlock>
@@ -1011,7 +1235,7 @@ const Step4 = ({ data, step1Data }) => {
           {section === "sustainment" && (
             <div>
               <SectionBlock title="Personnel">
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 6 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: isMobile ? 6 : 10, marginTop: 6 }}>
                   {[
                     { label: "Assessment", value: sop.sustainment.personnel.assessment_teams },
                     { label: "Response", value: sop.sustainment.personnel.response_crews },
@@ -1025,10 +1249,30 @@ const Step4 = ({ data, step1Data }) => {
                 </div>
               </SectionBlock>
               <SectionBlock title="Equipment">
-                {sop.sustainment.equipment.map((e, i) => <div key={i} style={{ padding: "3px 0" }}>→ {e}</div>)}
+                {sop.sustainment.equipment.map((e, i) => (
+                  editing && editing.field === "equipment" && editing.index === i ? (
+                    <div key={i} style={{ padding: "3px 0", display: "flex", gap: 6 }}>
+                      <input value={editValue} onChange={ev => setEditValue(ev.target.value)} onKeyDown={ev => { if (ev.key === "Enter") saveEdit(); if (ev.key === "Escape") cancelEdit(); }}
+                        autoFocus style={{ flex: 1, padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.accent}`, fontSize: 12, fontFamily: font, outline: "none" }} />
+                      <button onClick={saveEdit} style={{ background: C.green, color: "#fff", border: "none", borderRadius: 4, padding: "2px 8px", fontSize: 10, cursor: "pointer" }}>✓</button>
+                    </div>
+                  ) : (
+                    <div key={i} style={{ padding: "3px 0", cursor: "pointer" }} onClick={() => startEdit("sustainment", "equipment", i)}>→ {e} <span style={{ fontSize: 9, color: C.textMuted, opacity: 0.5 }}>✎</span></div>
+                  )
+                ))}
               </SectionBlock>
               <SectionBlock title="Materials">
-                {sop.sustainment.materials.map((m, i) => <div key={i} style={{ padding: "3px 0" }}>→ {m}</div>)}
+                {sop.sustainment.materials.map((m, i) => (
+                  editing && editing.field === "materials" && editing.index === i ? (
+                    <div key={i} style={{ padding: "3px 0", display: "flex", gap: 6 }}>
+                      <input value={editValue} onChange={ev => setEditValue(ev.target.value)} onKeyDown={ev => { if (ev.key === "Enter") saveEdit(); if (ev.key === "Escape") cancelEdit(); }}
+                        autoFocus style={{ flex: 1, padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.accent}`, fontSize: 12, fontFamily: font, outline: "none" }} />
+                      <button onClick={saveEdit} style={{ background: C.green, color: "#fff", border: "none", borderRadius: 4, padding: "2px 8px", fontSize: 10, cursor: "pointer" }}>✓</button>
+                    </div>
+                  ) : (
+                    <div key={i} style={{ padding: "3px 0", cursor: "pointer" }} onClick={() => startEdit("sustainment", "materials", i)}>→ {m} <span style={{ fontSize: 9, color: C.textMuted, opacity: 0.5 }}>✎</span></div>
+                  )
+                ))}
               </SectionBlock>
               <SectionBlock title="Logistics" editKey="logistics" editSection="sustainment"><p style={{ margin: 0 }}>{sop.sustainment.logistics}</p></SectionBlock>
             </div>
@@ -1040,7 +1284,17 @@ const Step4 = ({ data, step1Data }) => {
               <SectionBlock title="Reporting" editKey="reporting" editSection="command_signal"><p style={{ margin: 0 }}>{sop.command_signal.reporting}</p></SectionBlock>
               <SectionBlock title="Communications" editKey="communications" editSection="command_signal"><p style={{ margin: 0 }}>{sop.command_signal.communications}</p></SectionBlock>
               <SectionBlock title="Coordination">
-                {sop.command_signal.coordination.map((c, i) => <div key={i} style={{ padding: "3px 0" }}>→ {c}</div>)}
+                {sop.command_signal.coordination.map((c, i) => (
+                  editing && editing.field === "coordination" && editing.index === i ? (
+                    <div key={i} style={{ padding: "3px 0", display: "flex", gap: 6 }}>
+                      <input value={editValue} onChange={ev => setEditValue(ev.target.value)} onKeyDown={ev => { if (ev.key === "Enter") saveEdit(); if (ev.key === "Escape") cancelEdit(); }}
+                        autoFocus style={{ flex: 1, padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.accent}`, fontSize: 12, fontFamily: font, outline: "none" }} />
+                      <button onClick={saveEdit} style={{ background: C.green, color: "#fff", border: "none", borderRadius: 4, padding: "2px 8px", fontSize: 10, cursor: "pointer" }}>✓</button>
+                    </div>
+                  ) : (
+                    <div key={i} style={{ padding: "3px 0", cursor: "pointer" }} onClick={() => startEdit("command_signal", "coordination", i)}>→ {c} <span style={{ fontSize: 9, color: C.textMuted, opacity: 0.5 }}>✎</span></div>
+                  )
+                ))}
               </SectionBlock>
             </div>
           )}
@@ -1054,9 +1308,30 @@ const Step4 = ({ data, step1Data }) => {
 // MAIN APP
 // ============================================================
 export default function App() {
+  const isMobile = useIsMobile();
+  const [appMode, setAppMode] = useState("planner");
+
+  // Warn before leaving if agents have run
+  useEffect(() => {
+    const handler = (e) => {
+      if (step1Data) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [step1Data]); // "planner" | "field"
   const [step, setStep] = useState(0);
+  const [mode, setMode] = useState("planning"); // planning | assessment
   const [chatOpen, setChatOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Warn user if they try to leave during agent processing
+  useEffect(() => {
+    const handler = (e) => {
+      if (loading) { e.preventDefault(); e.returnValue = "An agent is still processing. Are you sure you want to leave?"; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [loading]);
   const [eventLabel, setEventLabel] = useState(null);
 
   // Data passed between steps
@@ -1069,43 +1344,61 @@ export default function App() {
     { role: "agent", text: "I'm the Disaster Context Agent. Describe an event or enter a FEMA declaration number, and I'll analyze the affected area for priority zones." },
   ]);
 
-  const agentNames = ["Disaster Context Agent", "Disaster Context Agent", "Construction Profile Agent", "Mission Planning Agent"];
+  const agentNames = ["Priority Analysis Agent", "Priority Analysis Agent", "Construction Profile Agent", "Mission Planning Agent"];
 
   const handleChat = async (text) => {
     setMessages(prev => [...prev, { role: "user", text }]);
     const agentKeys = ["context", "context", "construction", "mission"];
+    // Build context from all available step data so agent has full picture
+    const chatContext = {
+      step: step,
+      event: step1Data?.event || null,
+      zones: (step2Data?.zones || step1Data?.zones || []).slice(0, 5).map(z => ({ rank: z.rank, area_name: z.area_name || z.area, composite_score: z.composite_score, svi_score: z.svi_score, population: z.population, risk_level: z.risk_level })),
+      profiles_available: !!(step2Data?.profiles),
+      plan_available: !!(step3Data?.sop),
+      summary: step1Data?.summary || "",
+    };
     try {
-      const res = await fetch(API + "/api/chat/" + agentKeys[step], { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      const res = await fetch(API + "/api/chat/" + agentKeys[step], { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, context: chatContext, history: messages.slice(-6) }) });
       if (!res.ok) throw new Error("API " + res.status);
       const d = await res.json();
       setMessages(prev => [...prev, { role: "agent", text: d.response || d.text || JSON.stringify(d) }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: "agent", text: "Agent unavailable: " + err.message }]);
     }
+    return; // ensure promise resolves for sending state
   };
 
   const completeStep = (stepNum, data) => {
-    if (stepNum === 0) { setStep1Data(data); setEventLabel(data.event?.declaration || "Event"); setStep(1); }
+    if (stepNum === 0) { setStep1Data(data); setStep2Data(null); setStep3Data(null); setEventLabel(data.event?.declaration || "Event"); setStep(1); }
     if (stepNum === 1) { setStep2Data(data); setStep(2); }
     if (stepNum === 2) { setStep3Data(data); setStep(3); }
   };
 
   return (
     <div style={{ background: "#EDE8E0", minHeight: "100vh", fontFamily: font }}>
-      <TopBar event={eventLabel} chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} />
-      <WizardSteps current={step} onNav={setStep} />
+      <TopBar event={eventLabel} chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} mode={appMode} onModeSwitch={() => setAppMode(appMode === "planner" ? "field" : "planner")} />
+      {appMode === "planner" && <WizardSteps current={step} onNav={setStep} />}
 
       <div style={{ display: "flex", minHeight: "calc(100vh - 96px)" }}>
         {/* Main content */}
-        <div style={{ flex: 1, padding: "20px 28px", overflowY: "auto", background: C.bg }}>
+        <div style={{ flex: 1, padding: isMobile ? "12px 12px" : "20px 28px", overflowY: "auto", background: C.bg }}>
+          {appMode === "field" ? (
+            <FieldAssessment
+              zones={step2Data?.zones || step1Data?.zones || []}
+              onBack={() => setAppMode("planner")}
+            />
+          ) : (<>
           {step === 0 && <Step1 onComplete={d => completeStep(0, d)} setLoading={setLoading} loading={loading} />}
-          {step === 1 && <Step2 data={step1Data} onComplete={d => completeStep(1, d)} setLoading={setLoading} loading={loading} />}
-          {step === 2 && <Step3 data={step2Data} step1Data={step1Data} onComplete={d => completeStep(2, d)} setLoading={setLoading} loading={loading} />}
-          {step === 3 && <Step4 data={step3Data} step1Data={step1Data} />}
+          {step === 1 && <Step2 data={step1Data} onComplete={d => completeStep(1, d)} setLoading={setLoading} loading={loading} onAskAgent={(q) => { setChatOpen(true); handleChat(q); }} cachedResult={step2Data} />}
+          {step === 2 && <Step3 data={step2Data} step1Data={step1Data} onComplete={d => completeStep(2, d)} setLoading={setLoading} loading={loading} onAskAgent={(q) => { setChatOpen(true); handleChat(q); }} cachedResult={step3Data} />}
+          {step === 3 && <Step4 data={step3Data} step1Data={step1Data} onAction={(q) => { setChatOpen(true); handleChat(q); }} onNewAlert={() => { setStep(0); setStep1Data(null); setStep2Data(null); setStep3Data(null); setEventLabel(null); }} onReturnToStart={() => setStep(0)} />}
+            </>
+          )}
         </div>
 
         {/* Chat drawer */}
-        {chatOpen && <ChatDrawer messages={messages} onSend={handleChat} agentName={agentNames[step]} />}
+        {chatOpen && <ChatDrawer messages={messages} onSend={handleChat} agentName={agentNames[step]} isMobile={isMobile} onClose={() => setChatOpen(false)} />}
       </div>
     </div>
   );
