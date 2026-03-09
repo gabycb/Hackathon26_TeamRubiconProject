@@ -966,7 +966,14 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
     if (index !== undefined) {
       val = Array.isArray(sop[sec][field]) ? sop[sec][field][index] : "";
     } else {
-      val = sop[sec][field] || "";
+      const raw = sop[sec]?.[field];
+      if (Array.isArray(raw)) {
+        val = raw.join("\n"); // Edit arrays as newline-separated text
+      } else if (typeof raw === "object" && raw !== null) {
+        val = JSON.stringify(raw, null, 2); // Edit objects as JSON
+      } else {
+        val = raw || "";
+      }
     }
     setEditing({ section: sec, field, index });
     setEditValue(val);
@@ -975,8 +982,14 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
   const saveEdit = () => {
     if (!editing) return;
     const newSop = JSON.parse(JSON.stringify(sop));
+    const originalVal = sop[editing.section]?.[editing.field];
     if (editing.index !== undefined) {
       newSop[editing.section][editing.field][editing.index] = editValue;
+    } else if (Array.isArray(originalVal)) {
+      // Split newline-separated text back into array
+      newSop[editing.section][editing.field] = editValue.split("\n").map(s => s.trim()).filter(Boolean);
+    } else if (typeof originalVal === "object" && originalVal !== null) {
+      try { newSop[editing.section][editing.field] = JSON.parse(editValue); } catch { /* keep as string */ newSop[editing.section][editing.field] = editValue; }
     } else {
       newSop[editing.section][editing.field] = editValue;
     }
@@ -1059,7 +1072,7 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
       </div>
       {editing && editing.field === editKey && editing.section === (editSec || section) && editing.index === undefined ? (
         <div>
-          <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={4} style={{
+          <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={Math.min(12, Math.max(4, editValue.split("\n").length + 1))} style={{
             width: "100%", padding: "8px 10px", borderRadius: 6, border: `1px solid ${C.accent}`,
             fontSize: 12, fontFamily: font, color: C.text, lineHeight: 1.7, resize: "vertical", boxSizing: "border-box", outline: "none",
           }} />
@@ -1166,7 +1179,7 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
               <SectionBlock title="Event Summary" editKey="event_summary" editSection="situation"><p style={{ margin: 0 }}>{sop.situation.event_summary}</p></SectionBlock>
               <SectionBlock title="Affected Area" editKey="affected_area" editSection="situation"><p style={{ margin: 0 }}>{sop.situation.affected_area}</p></SectionBlock>
               <SectionBlock title="Impact Summary" editKey="impact_summary" editSection="situation"><p style={{ margin: 0 }}>{sop.situation.impact_summary}</p></SectionBlock>
-              <SectionBlock title="Key Vulnerabilities">
+              <SectionBlock title="Key Vulnerabilities" editKey="key_vulnerabilities" editSection="situation">
                 {sop.situation.key_vulnerabilities.map((v, i) => (
                   editing && editing.field === "key_vulnerabilities" && editing.index === i ? (
                     <div key={i} style={{ padding: "4px 0", display: "flex", gap: 6 }}>
@@ -1189,7 +1202,7 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
           {section === "mission" && (
             <div>
               <SectionBlock title="Primary Objective" editKey="primary_objective" editSection="mission"><p style={{ margin: 0 }}>{sop.mission.primary_objective}</p></SectionBlock>
-              <SectionBlock title="Secondary Objectives">
+              <SectionBlock title="Secondary Objectives" editKey="secondary_objectives" editSection="mission">
                 {sop.mission.secondary_objectives.map((o, i) => (
                   editing && editing.field === "secondary_objectives" && editing.index === i ? (
                     <div key={i} style={{ padding: "4px 0", display: "flex", gap: 6 }}>
@@ -1236,7 +1249,7 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
 
           {section === "sustainment" && (
             <div>
-              <SectionBlock title="Personnel">
+              <SectionBlock title="Personnel" editKey="personnel" editSection="sustainment">
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: isMobile ? 6 : 10, marginTop: 6 }}>
                   {[
                     { label: "Assessment", value: sop.sustainment.personnel.assessment_teams },
@@ -1250,7 +1263,7 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
                   ))}
                 </div>
               </SectionBlock>
-              <SectionBlock title="Equipment">
+              <SectionBlock title="Equipment" editKey="equipment" editSection="sustainment">
                 {sop.sustainment.equipment.map((e, i) => (
                   editing && editing.field === "equipment" && editing.index === i ? (
                     <div key={i} style={{ padding: "3px 0", display: "flex", gap: 6 }}>
@@ -1263,7 +1276,7 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
                   )
                 ))}
               </SectionBlock>
-              <SectionBlock title="Materials">
+              <SectionBlock title="Materials" editKey="materials" editSection="sustainment">
                 {sop.sustainment.materials.map((m, i) => (
                   editing && editing.field === "materials" && editing.index === i ? (
                     <div key={i} style={{ padding: "3px 0", display: "flex", gap: 6 }}>
@@ -1285,7 +1298,7 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
               <SectionBlock title="Command Structure" editKey="command_structure" editSection="command_signal"><p style={{ margin: 0 }}>{sop.command_signal.command_structure}</p></SectionBlock>
               <SectionBlock title="Reporting" editKey="reporting" editSection="command_signal"><p style={{ margin: 0 }}>{sop.command_signal.reporting}</p></SectionBlock>
               <SectionBlock title="Communications" editKey="communications" editSection="command_signal"><p style={{ margin: 0 }}>{sop.command_signal.communications}</p></SectionBlock>
-              <SectionBlock title="Coordination">
+              <SectionBlock title="Coordination" editKey="coordination" editSection="command_signal">
                 {sop.command_signal.coordination.map((c, i) => (
                   editing && editing.field === "coordination" && editing.index === i ? (
                     <div key={i} style={{ padding: "3px 0", display: "flex", gap: 6 }}>
