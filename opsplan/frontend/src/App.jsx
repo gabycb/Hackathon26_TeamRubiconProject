@@ -476,8 +476,10 @@ const AskableValue = ({ label, value, onAsk, children }) => {
       onMouseEnter={() => !isMob && setShowTip(true)} onMouseLeave={() => setShowTip(false)}
       onClick={(e) => {
         e.stopPropagation();
-        if (isMob && !showTip) { setShowTip(true); setTimeout(() => setShowTip(false), 2500); return; }
-        if (onAsk) onAsk(`Explain the ${label} value of ${value} — what does this mean for disaster response planning and how was it calculated?`);
+        try {
+          if (isMob && !showTip) { setShowTip(true); setTimeout(() => setShowTip(false), 2500); return; }
+          if (onAsk) onAsk(`Explain the ${label} value of ${value} — what does this mean for disaster response planning and how was it calculated?`);
+        } catch (err) { console.error("AskableValue error:", err); }
       }}>
       {children || value}
       <span style={{ fontSize: 9, opacity: showTip ? 1 : 0.4, transition: "opacity 0.15s", color: "#3D6B8E" }}>ℹ️</span>
@@ -485,7 +487,7 @@ const AskableValue = ({ label, value, onAsk, children }) => {
         <span style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap",
           padding: "5px 12px", borderRadius: 6, fontSize: 10, fontWeight: 600, zIndex: 10,
           background: "#2C2520", color: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}
-          onClick={(e) => { e.stopPropagation(); if (onAsk) onAsk(`Explain the ${label} value of ${value} — what does this mean for disaster response planning and how was it calculated?`); }}>
+          onClick={(e) => { e.stopPropagation(); try { if (onAsk) onAsk(`Explain the ${label} value of ${value} — what does this mean for disaster response planning and how was it calculated?`); } catch(err) { console.error(err); } }}>
           💬 {isMob ? "Tap to ask agent" : "Click to ask agent"} about {label}
         </span>
       )}
@@ -1390,8 +1392,8 @@ export default function App() {
             />
           ) : (<>
           {step === 0 && <Step1 onComplete={d => completeStep(0, d)} setLoading={setLoading} loading={loading} />}
-          {step === 1 && <Step2 data={step1Data} onComplete={d => completeStep(1, d)} setLoading={setLoading} loading={loading} onAskAgent={(q) => { setChatOpen(true); handleChat(q); }} cachedResult={step2Data} />}
-          {step === 2 && <Step3 data={step2Data} step1Data={step1Data} onComplete={d => completeStep(2, d)} setLoading={setLoading} loading={loading} onAskAgent={(q) => { setChatOpen(true); handleChat(q); }} cachedResult={step3Data} />}
+          {step === 1 && <Step2 data={step1Data} onComplete={d => completeStep(1, d)} setLoading={setLoading} loading={loading} onAskAgent={(q) => { setChatOpen(true); setTimeout(() => handleChat(q).catch(console.error), 100); }} cachedResult={step2Data} />}
+          {step === 2 && <Step3 data={step2Data} step1Data={step1Data} onComplete={d => completeStep(2, d)} setLoading={setLoading} loading={loading} onAskAgent={(q) => { setChatOpen(true); setTimeout(() => handleChat(q).catch(console.error), 100); }} cachedResult={step3Data} />}
           {step === 3 && <Step4 data={step3Data} step1Data={step1Data} onAction={(q) => { setChatOpen(true); handleChat(q); }} onNewAlert={() => { setStep(0); setStep1Data(null); setStep2Data(null); setStep3Data(null); setEventLabel(null); }} onReturnToStart={() => setStep(0)} />}
             </>
           )}
