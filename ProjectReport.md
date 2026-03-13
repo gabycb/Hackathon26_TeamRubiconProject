@@ -82,21 +82,21 @@ The architecture explicitly reserves services/ for three production-ready extens
 
 | Category | Technology | Role in Project |
 | :---- | :---- | :---- |
-| **AI Orchestration** | **Microsoft Semantic Kernel** | **Agent framework; manages LLM calls, native function plugins, and multi-step pipelines** |
-| **LLM** | **Azure OpenAI GPT-4o** | **Powers all three agents for reasoning, narrative generation, and contextual chat** |
-| **Backend Framework** | **FastAPI (Python 3.11)** | **Async REST API; lifespan events for agent initialization; CORS for frontend integration** |
-| **Frontend** | **React \+ Vite** | **4-step wizard UI; dev server proxy eliminates CORS friction in development** |
-| **Database** | **SQLite (async)** | **9-table schema for SVI, NRI, Census ACS, housing stock, materials reference, and generated plans** |
-| **Geospatial** | **Census Geocoder API** | **Converts disaster addresses to FIPS census tract codes for data join** |
-| **Hazard Data** | **FEMA NRI CSV** | **Census-tract-level natural hazard risk scores (\~180 MB, loaded locally)** |
-| **Vulnerability Data** | **CDC SVI 2022 CSV** | **Social vulnerability composite scores by census tract (\~85 MB, loaded locally)** |
-| **Demographics** | **Census ACS 5-Year API** | **Housing units, demographics, financial indicators fetched via Census API key** |
-| **Structural Data** | **Hazus Methodology** | **Building stock and replacement cost estimation for structural profiling** |
-| **Document Export** | **python-docx** | **SOP rendered to .docx in Team Rubicon field format** |
-| **Vision (Phase 2\)** | **Azure AI Vision** | **Damage photo classification from field team mobile uploads** |
-| **Storage (Phase 2\)** | **Azure Blob Storage** | **Photo and document storage for field operations** |
-| **Auth (Production)** | **Microsoft Entra ID** | **RBAC for operator and admin roles** |
-| **Alerts (Phase 2\)** | **Azure Communication Services** | **SMS/email weather alerts during active operations** |
+| **AI Orchestration** | **Microsoft Semantic Kernel** | Agent framework; manages LLM calls, native function plugins, and multi-step pipelines |
+| **LLM** | **Azure OpenAI GPT-4o** | Powers all three agents for reasoning, narrative generation, and contextual chat |
+| **Backend Framework** | **FastAPI (Python 3.11)** | Async REST API; lifespan events for agent initialization; CORS for frontend integration |
+| **Frontend** | **React \+ Vite** | 4-step wizard UI; dev server proxy eliminates CORS friction in development |
+| **Database** | **SQLite (async)** | 9-table schema for SVI, NRI, Census ACS, housing stock, materials reference, and generated plans |
+| **Geospatial** | **Census Geocoder API** | Converts disaster addresses to FIPS census tract codes for data join |
+| **Hazard Data** | **FEMA NRI CSV** | Census-tract-level natural hazard risk scores (\~180 MB, loaded locally) |
+| **Vulnerability Data** | **CDC SVI 2022 CSV** | Social vulnerability composite scores by census tract (\~85 MB, loaded locally |
+| **Demographics** | **Census ACS 5-Year API** | Housing units, demographics, financial indicators fetched via Census API key |
+| **Structural Data** | **Hazus Methodology** | Building stock and replacement cost estimation for structural profiling |
+| **Document Export** | **python-docx** | SOP rendered to .docx in Team Rubicon field format |
+| **Vision (Phase 2\)** | **Azure AI Vision** | Damage photo classification from field team mobile uploads |
+| **Storage (Phase 2\)** | **Azure Blob Storage** | Photo and document storage for field operations |
+| **Auth (Production)** | **Microsoft Entra ID** | RBAC for operator and admin roles |
+| **Alerts (Phase 2\)** | **Azure Communication Services** | SMS/email weather alerts during active operations |
 
 **Agent Architecture**
 
@@ -125,7 +125,7 @@ OpsPlan implements a sequential multi-agent pipeline using Microsoft Semantic Ke
 
 ●     Mobile integration: the Azure AI Vision service would allow field teams to submit damage photos that update zone profiles in real time
 
-**Background**  
+## Background  
 Our hackathon team that worked on this project is composed of veterans and US military members that have experience in emergency management. We wanted to participate in this challenge to learn about agentic systems, while helping solve a real problem. For this project, we partnered with [Team Rubicon](https://teamrubiconusa.org/about-us/), a veteran-led humanitarian organization with the mission of helping people affected by disasters. Today, they have a team of over 180,000+ members and volunteers that work to respond to disasters and **serve communities around the world**. After disasters, vulnerable communities need help clearing roadways, removing debris, and setting a new foundation for a stronger community. That’s where Team Rubicon drops in \- and **they move fast.**  
 We met with the leadership team at Team Rubicon and gathered information on how we can build an AI-powered system to support their planning and deployment process. They identified three key areas where they see AI could provide real-world value. These three areas are: workflow efficiencies, real-time data gathering and consolidation, and generating a curated and accurate mobilization plan. We focused on reducing time and resources expended in these three areas for our hackathon project.
 
@@ -141,14 +141,10 @@ Gabriela Barrera, [LinkedIn](https://www.linkedin.com/in/gabriela-c-barrera/)
 Travis Arnold, [LinkedIn](https://www.linkedin.com/in/travis-a-646700394/)  
 Jethro Shen, [LinkedIn](https://www.linkedin.com/in/jethroshen/)
 
-## **Research**
-
-**Written with assistance by AI**
-
-## 
+# **Research**
+**Written with assistance by AI** 
 
 ## Current Research on Disaster Planning and AI
-
 Disaster operations planning faces multiple intertwined challenges: complex logistics (often representing approximately 80% of relief effort), multi-agency coordination failures in chaotic environments, fragmented information systems, and deep uncertainty in needs and hazards \[1, 6\]. AI and data-driven approaches are increasingly explored to address these issues. Machine learning and computer vision models can analyze satellite imagery to detect damage \[3\] or process social media to locate survivors \[4\]. Optimization and simulation methods — including agent-based and reinforcement learning approaches — can improve resource allocation and evacuation planning \[5, 6\]. Digital volunteers (crowdsourced mapping and reporting) augment human capacity; AI can help vet and triage their contributions but also raises trust and privacy concerns \[4, 9\]. Key barriers include data quality, algorithmic bias, lack of interoperability, and ethical and regulatory gaps \[8, 9\]. Evaluation typically uses ML metrics (accuracy, F1) plus domain-specific measures (decision time, coverage, fairness) \[10, 11\]. Despite progress, gaps remain in integrated AI–crowdsourcing systems, multilingual tools, and validation of approaches \[4, 9\].
 
 ## Disaster Management Phases and Key Challenges
