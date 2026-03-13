@@ -9,11 +9,11 @@
 
 ## What It Does
 
-OpsPlan automates disaster response mission planning for Team Rubicon operators. A commander describes a disaster event — or pastes a FEMA declaration — and OpsPlan's three-agent AI pipeline produces a complete, field-ready Standard Operating Procedure in minutes.
+DROP automates disaster response mission planning for Team Rubicon operators. A commander describes a disaster event — or pastes a FEMA declaration — and DROP's three-agent AI pipeline produces a complete, field-ready Standard Operating Procedure in minutes. DROP was built specifically for the **Microsoft Dev Days Hackathon Challenge** and accomplishes our mission to automate and improve disaster response operations with input from a veteran-led humanitarian organization, Team Rubicon (TR).
 
-**Without OpsPlan:** operators manually cross-reference SVI data, NRI risk tables, Census housing data, and Hazus building stock reports to prioritize zones, then hand-author a 5-paragraph SOP.
+**Without DROP:** operators manually cross-reference SVI data, NRI risk tables, Census housing data, and Hazus building stock reports to prioritize zones, then hand-author a 5-paragraph operation plan (known as SOP).
 
-**With OpsPlan:** that same workflow takes 3 clicks and produces a structured, exportable SOP with ranked priority zones, structural profiles, phased timelines, and resource allocations.
+**With DROP:** that same workflow takes 3 clicks and produces a structured, exportable operationa plan (SOP) with ranked priority zones, structural profiles, phased timelines, and resource allocations.
 
 ---
 
@@ -24,17 +24,17 @@ OpsPlan automates disaster response mission planning for Team Rubicon operators.
           │
           ▼
 ┌─────────────────────────┐
-│  Disaster Context Agent │  ← SVI + NRI + Census → ranked priority zones
+│  Disaster Context Agent │  ← Open source Data (SVI + NRI + Census) → ranked priority zones
 └─────────────┬───────────┘
               │  human approval gate
               ▼
 ┌──────────────────────────────┐
-│  Construction Profile Agent  │  ← Hazus GBS + materials → structural profiles per zone
+│  Construction Profile Agent  │  + Analysis on FEMA Databases → structural profiles per zone
 └──────────────┬───────────────┘
                │  human approval gate
                ▼
 ┌──────────────────────────────┐
-│   Mission Planning Agent     │  ← generates full 5-paragraph TR SOP + .docx export
+│   Mission Planning Agent     │  ← generates full 5-paragraph Operation Plan + .docx export
 └──────────────────────────────┘
 ```
 
@@ -42,11 +42,11 @@ Each agent step has a **human approval gate** before the pipeline advances. A **
 
 ---
 
-## Judging Criteria
+## Project Overview
 
-### 1. Technological Implementation (20%)
+### 1. Technological Implementation
 
-OpsPlan is built on production-grade, well-structured code throughout.
+DROP is built on production-grade, well-structured code throughout.
 
 **Semantic Kernel agent architecture** — All three agents inherit from a shared `BaseAgent` class that handles kernel initialization, Azure OpenAI wiring, automatic function-calling loops, structured JSON output parsing, and conversation history management. Subclasses only implement `agent_name`, `system_prompt`, and `register_skills()`.
 
@@ -77,7 +77,7 @@ exec_settings.function_choice_behavior = FunctionChoiceBehavior.Auto(
 
 ---
 
-### 2. Agentic Design & Innovation (20%)
+### 2. Agentic Design
 
 OpsPlan implements a **sequential multi-agent pipeline with human-in-the-loop gates** — a deliberate design choice for high-stakes emergency response contexts where operator trust and auditability matter more than full automation.
 
@@ -93,11 +93,11 @@ OpsPlan implements a **sequential multi-agent pipeline with human-in-the-loop ga
 
 ---
 
-### 3. Real-World Impact & Applicability (20%)
+### 3. Real-World Impact & Applicability 
 
-**The problem is real and significant.** Team Rubicon deploys thousands of veterans on disaster missions annually. Mission planning currently requires specialists to manually synthesize multiple government datasets and author SOPs under time pressure, immediately after a disaster strikes — when speed directly affects lives.
+**The problem is real and significant.** Disaster response organizations, like Team Rubicon, deploy thousands of volunteers on disaster missions annually. Mission planning currently requires specialists to manually synthesize multiple government datasets and author plans under time pressure, immediately after a disaster strikes — when speed directly affects lives.
 
-**The data is real.** OpsPlan queries three authoritative open government datasets:
+**The data is real.** DROP queries three authoritative open government datasets:
 - **CDC SVI 2022** (~85 MB) — social vulnerability by census tract, including poverty rates, disability, mobile home density, and language barriers
 - **FEMA NRI** (~180 MB) — natural hazard risk scores and expected annual loss by census tract
 - **Census ACS 5-Year** — housing types, occupancy, and financial data via live API
@@ -109,16 +109,16 @@ These aren't mock datasets. The Hurricane Harvey demo uses real FIPS tracts for 
 - Backend designed for Azure Container Apps or App Service
 - Config managed via environment variables with `.env.example` template
 - Database initialization scripted (`scripts/setup_db.py`) with data loaders for each source
-- `.docx` SOP export ready to hand to a field commander
+- `.docx` Operation Plan export ready to hand to a field commander
 - Async database layer, structured logging, and health endpoint (`GET /health`) are production patterns
 
 **Extensibility:** the `services/` directory scaffolds Weather Sentinel integration, authentication, and push notifications as named next steps — not afterthoughts.
 
 ---
 
-### 4. User Experience & Presentation (20%)
+### 4. User Experience
 
-**Wizard-based workflow** maps directly to how TR operators think: define the event → review zone rankings → review construction profiles → review and export the SOP. The 4-step progression mirrors the actual planning sequence, so the UI itself teaches the process.
+**Wizard-based workflow** maps directly to how disaster response operators think: define the event → review zone rankings → review construction profiles → review and export the plan. The 4-step progression mirrors the actual planning sequence, so the UI itself teaches the process.
 
 **Human approval gates** are a deliberate UX feature, not a limitation. In emergency response, operators need to be able to catch and correct AI errors before they propagate downstream. Each gate shows the agent's full output before advancing.
 
@@ -131,16 +131,16 @@ These aren't mock datasets. The Hurricane Harvey demo uses real FIPS tracts for 
 - Backend handles all data access, agent orchestration, and document generation — the frontend is stateless and thin
 - Vite dev proxy eliminates CORS friction in development; production uses Azure Static Web Apps routing
 
-**Export:** the `.docx` SOP output is formatted for actual field use — not a JSON dump, but a structured Word document a commander can print and brief from.
+**Export:** the `.docx` operation plan output is formatted for actual field use — not a JSON dump, but a structured Word document a commander can print and brief from.
 
 ---
 
-### 5. Adherence to Hackathon Category (20%)
+### 5. Hackathon Information
 
-OpsPlan was built specifically for the **Team Rubicon hackathon challenge**: automate or improve disaster response operations for a veteran-led humanitarian organization.
+DROP was built specifically for the **Microsoft Dev Days Hackathon Challenge** and accomplishes our mission to automate and improve disaster response operations with input from a veteran-led humanitarian organization, Team Rubicon (TR).
 
 Every design decision traces back to Team Rubicon's actual operational context:
-- The **5-paragraph SOP format** (Situation, Mission, Execution, Sustainment, Command & Signal) is the TR standard — `SOPTemplateSkill` validates against it explicitly
+- The **5-paragraph plan format** (Situation, Mission, Execution, Sustainment, Command & Signal) is the operations plan standard — `SOPTemplateSkill` validates against it explicitly
 - **Priority scoring weights** (SVI 30%, NRI 30%, housing vulnerability 25%, population density 15%) reflect TR's focus on the most socially vulnerable populations, not just highest-damage zones
 - **Resource allocation rules** model TR's typical team structure: 4-person assessment teams, 4-person response crews, zone-based equipment scaling
 - The **inbound communications pipeline** addresses a real TR operational need: field teams texting damage assessments back to command
@@ -237,7 +237,7 @@ npm run dev
 1. **Step 1 — Define Event:** click "Pre-fill from Alert" to load Hurricane Harvey, then "Run Disaster Context Agent"
 2. **Step 2 — Priority Analysis:** review ranked zones → "Approve Rankings"
 3. **Step 3 — Construction Profiles:** review structural data per zone → "Approve Profiles"
-4. **Step 4 — Mission Plan:** review all 5 SOP sections → "Export .docx"
+4. **Step 4 — Mission Plan:** review all 5 operation plan sections → "Export .docx"
 5. **Agent Chat:** available from the header at any step
 
 ---
