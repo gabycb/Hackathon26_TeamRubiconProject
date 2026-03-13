@@ -141,9 +141,8 @@ Gabriela Barrera, [LinkedIn](https://www.linkedin.com/in/gabriela-c-barrera/)
 Travis Arnold, [LinkedIn](https://www.linkedin.com/in/travis-a-646700394/)  
 Jethro Shen, [LinkedIn](https://www.linkedin.com/in/jethroshen/)
 
-# **Research**
+# Research
 **Written with assistance by AI** 
-
 ## Current Research on Disaster Planning and AI
 Disaster operations planning faces multiple intertwined challenges: complex logistics (often representing approximately 80% of relief effort), multi-agency coordination failures in chaotic environments, fragmented information systems, and deep uncertainty in needs and hazards \[1, 6\]. AI and data-driven approaches are increasingly explored to address these issues. Machine learning and computer vision models can analyze satellite imagery to detect damage \[3\] or process social media to locate survivors \[4\]. Optimization and simulation methods — including agent-based and reinforcement learning approaches — can improve resource allocation and evacuation planning \[5, 6\]. Digital volunteers (crowdsourced mapping and reporting) augment human capacity; AI can help vet and triage their contributions but also raises trust and privacy concerns \[4, 9\]. Key barriers include data quality, algorithmic bias, lack of interoperability, and ethical and regulatory gaps \[8, 9\]. Evaluation typically uses ML metrics (accuracy, F1) plus domain-specific measures (decision time, coverage, fairness) \[10, 11\]. Despite progress, gaps remain in integrated AI–crowdsourcing systems, multilingual tools, and validation of approaches \[4, 9\].
 
