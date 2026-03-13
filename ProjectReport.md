@@ -78,7 +78,7 @@ The architecture explicitly reserves services/ for three production-ready extens
 
 ●     Microsoft Entra ID — Role-based authentication for production deployment
 
-**Technologies Used**
+## Technologies Used
 
 | Category | Technology | Role in Project |
 | :---- | :---- | :---- |
@@ -98,7 +98,7 @@ The architecture explicitly reserves services/ for three production-ready extens
 | **Auth (Production)** | **Microsoft Entra ID** | RBAC for operator and admin roles |
 | **Alerts (Phase 2\)** | **Azure Communication Services** | SMS/email weather alerts during active operations |
 
-**Agent Architecture**
+## Agent Architecture
 
 OpsPlan implements a sequential multi-agent pipeline using Microsoft Semantic Kernel as the orchestration layer. The design follows a deterministic-then-generative pattern: structured data retrieval and scoring are handled by deterministic native function plugins; the LLM is invoked only for reasoning, synthesis, and language generation. This separation ensures results are reproducible and auditable — critical requirements for disaster response operations.
 
