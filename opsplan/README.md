@@ -1,20 +1,94 @@
-# OpsPlan — Disaster Response Mission Planning
+# OpsPlan — AI-Powered Disaster Response Mission Planning
 
 **Team:** THYNK UNLIMITED  
-**Hackathon:** Team Rubicon  
-**Stack:** Python + FastAPI + Semantic Kernel (backend) · React + Vite (frontend) · Azure AI (agents)
+**Hackathon:** Team Rubicon × Microsoft Azure AI  
+**Live Demo:** [https://nice-coast-0b3959d1e.1.azurestaticapps.net](https://nice-coast-0b3959d1e.1.azurestaticapps.net)
 
 ---
 
 ## What It Does
 
-OpsPlan automates disaster response planning using a 3-agent AI pipeline:
+OpsPlan automates disaster response planning for Team Rubicon using a multi-agent AI pipeline. Field commanders input a disaster event and OpsPlan generates a complete 5-Paragraph Mission Plan with prioritized zones, construction vulnerability profiles, resource allocation, and team assignments — all backed by real Census, SVI, and NRI data.
 
-1. **Disaster Context Agent** — Takes an event description or FEMA declaration, queries SVI/NRI/Census data, and produces ranked priority zones.
-2. **Construction Profile Agent** — Builds detailed structural profiles for each zone using Hazus and Census housing data.
-3. **Mission Planning Agent** — Generates a Team Rubicon 5-paragraph SOP (Standard Operating Procedure) with phased timelines, resource allocation, and team assignments.
+### Part 1 — Mission Planning (4-Step Wizard)
 
-Each agent step has a human approval gate. A side-drawer chat lets operators ask questions or request adjustments at any step.
+1. **Define Event** — Enter FEMA declaration, location, or free text. Select from weather sentinel alerts. The **Priority Analysis Agent** queries SVI/NRI/Census databases to identify and rank affected census tracts.
+2. **Priority Analysis** — Review ranked zones with composite scoring (SVI × NRI × Housing Vulnerability × Population Density). Adjust weights, re-score, drill into zone details. Hover/tap any data point to ask the agent about it.
+3. **Construction Profiles** — Per-zone structural data across 6 tabs: Structural, Exterior, Site & Hazard, Financial, Demographics, TR Vulnerability. All sourced from real Census ACS and CDC SVI data.
+4. **Mission Plan** — Complete Team Rubicon 5-Paragraph Operations Order: Situation, Mission, Execution (phased with team assignments), Sustainment (personnel, equipment, materials), Command & Signal. Fully editable. Export as .docx or email to team.
+
+### Part 2 — Field Assessment (6-Screen Mobile Flow)
+
+1. **Select Zone** — Pick from priority zones identified in Part 1
+2. **Capture Photos** — Multi-photo upload with camera or gallery
+3. **AI Analysis** — Two-stage pipeline: Azure AI Vision 4.0 (scene detection, tags, OCR) → GPT-4o (structured damage classification). Photo overlay annotations. Human approve/reject per component finding.
+4. **Tag & Annotate** — Add hazard and damage tags, field notes
+5. **Review & Submit** — Confirm and save to mission database
+6. **Summary** — Export assessment report (.docx), view history, assess another structure
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────┐     ┌──────────────────────────────────────────┐
+│  Azure Static Web Apps  │────▶│  Azure Container Apps (FastAPI Backend)  │
+│  React Frontend         │     │                                          │
+│  Built-in Auth (AAD)    │     │  ┌─────────────────────────────────────┐ │
+└─────────────────────────┘     │  │  Semantic Kernel Agent Pipeline     │ │
+                                │  │                                     │ │
+                                │  │  Agent 1: Priority Analysis         │ │
+                                │  │    → SVI, NRI, Census, Geocoding    │ │
+                                │  │    → Priority Scoring (deterministic)│ │
+                                │  │                                     │ │
+                                │  │  Agent 2: Construction Profile      │ │
+                                │  │    → Census Housing, SVI Themes     │ │
+                                │  │                                     │ │
+                                │  │  Agent 3: Mission Planning          │ │
+                                │  │    → Resource Allocation, Timeline  │ │
+                                │  │                                     │ │
+                                │  │  Agent 4: Field Assessment          │ │
+                                │  │    → Azure AI Vision + GPT-4o       │ │
+                                │  └─────────────────────────────────────┘ │
+                                │                                          │
+                                │  ┌──────────┐  ┌───────────────────────┐ │
+                                │  │ Model     │  │ MCP Server (8 tools)  │ │
+                                │  │ Router    │  │ SSE + REST fallback   │ │
+                                │  └──────────┘  └───────────────────────┘ │
+                                │                                          │
+                                │  ┌──────────────────────────────────┐    │
+                                │  │  SQLite: SVI + NRI + Census ACS  │    │
+                                │  │  6,884 SVI tracts · 6,883 NRI    │    │
+                                │  └──────────────────────────────────┘    │
+                                └──────────────────────────────────────────┘
+                                         │              │
+                                         ▼              ▼
+                                ┌──────────────┐ ┌──────────────────┐
+                                │ Azure OpenAI │ │ Azure AI Vision  │
+                                │ GPT-4o       │ │ 4.0 (Florence)   │
+                                └──────────────┘ └──────────────────┘
+```
+
+---
+
+## Azure Services Used
+
+| Service | Purpose | Criterion |
+|---------|---------|-----------|
+| **Azure OpenAI (GPT-4o)** | Powers all 4 SK agents | Core AI |
+| **Azure AI Vision 4.0** | Stage 1 photo analysis — captions, tags, objects, OCR | Computer Vision |
+| **Azure Container Apps** | Backend deployment via container registry | Production Deployment |
+| **Azure Static Web Apps** | Frontend hosting with built-in auth | Production Deployment |
+| **Azure Container Registry** | Docker image storage | DevOps |
+
+## Microsoft Technologies
+
+| Technology | Implementation |
+|-----------|---------------|
+| **Semantic Kernel** | Agent framework — 4 agents with native function plugins and auto function calling |
+| **Model Router** | Per-agent model assignment (configurable gpt-4o / gpt-4o-mini per agent) |
+| **MCP Server** | 8 disaster data tools exposed via Model Context Protocol (SSE + REST) |
+| **Azure AI Foundry** | Container Apps deployment via ACR build pipeline |
 
 ---
 
@@ -22,194 +96,117 @@ Each agent step has a human approval gate. A side-drawer chat lets operators ask
 
 ```
 opsplan/
-├── frontend/                # React + Vite UI
-│   ├── src/
-│   │   ├── App.jsx          # Full 4-step wizard app
-│   │   └── main.jsx         # React entry point
-│   ├── index.html           # HTML shell
-│   ├── vite.config.js       # Dev server + API proxy
-│   └── package.json         # Node dependencies
-├── agents/                  # Semantic Kernel agents
-│   ├── base_agent.py        # Shared agent base class
-│   ├── disaster_context/    # Agent 1: zone prioritization
-│   ├── construction_profile/# Agent 2: structural profiles
-│   └── mission_planning/    # Agent 3: SOP generation
-├── skills/                  # SK native function plugins
-│   ├── svi_lookup.py        # CDC SVI queries
-│   ├── nri_lookup.py        # FEMA NRI queries
-│   ├── census_lookup.py     # Census ACS queries
-│   ├── geocoding.py         # Address → FIPS tract
-│   ├── priority_scoring.py  # Deterministic scoring
-│   ├── housing_stock.py     # Hazus building stock
-│   ├── construction_costs.py# Replacement cost estimation
-│   ├── material_profile.py  # Building materials lookup
-│   ├── sop_template.py      # SOP JSON validation
-│   ├── resource_allocation.py# Personnel/equipment calc
-│   ├── timeline_generator.py# Phased ops timeline
-│   └── docx_renderer.py     # SOP → Word document
-├── api/                     # FastAPI backend
-│   └── main.py              # Endpoints + CORS + lifespan
-├── data/
-│   ├── schema.sql           # SQLite schema (9 tables)
-│   ├── db.py                # Async database module
-│   └── loaders/             # Data loading scripts
-│       ├── load_svi.py      # CDC SVI 2022 CSV loader
-│       ├── load_nri.py      # FEMA NRI CSV loader
-│       ├── load_census.py   # Census ACS API loader
-│       └── load_materials.py# Reference materials seeder
+├── frontend/                    # React + Vite UI
+│   └── src/
+│       ├── App.jsx              # 4-step wizard + chat + mobile responsive
+│       └── FieldAssessment.jsx  # Part 2: 6-screen mobile assessment flow
+├── agents/                      # Semantic Kernel agents
+│   ├── base_agent.py            # Base class with Model Router integration
+│   ├── disaster_context/        # Agent 1: Priority Analysis
+│   ├── construction_profile/    # Agent 2: Construction Profiles
+│   └── mission_planning/        # Agent 3: Mission Plan generation
+├── skills/                      # SK native function plugins (12 tools)
+│   ├── svi_lookup.py            # CDC SVI queries
+│   ├── nri_lookup.py            # FEMA NRI queries
+│   ├── census_lookup.py         # Census ACS + vulnerability profiles
+│   ├── priority_scoring.py      # Deterministic composite scoring
+│   ├── resource_allocation.py   # Personnel/equipment calculator
+│   ├── timeline_generator.py    # Phased ops timeline
+│   └── ...
+├── services/
+│   └── mcp_server.py            # MCP Server — 8 tools via SSE transport
 ├── config/
-│   ├── settings.py          # Environment config
-│   └── .env.example         # Template for secrets
-├── scripts/
-│   └── setup_db.py          # Database initialization
-├── services/                # Future: Weather Sentinel, Auth, Notifications
-├── tests/                   # Unit + integration tests
-├── requirements.txt         # Python dependencies
-└── pyproject.toml           # Project metadata
+│   ├── settings.py              # Environment config loader
+│   └── model_router.py          # Per-agent model assignment
+├── api/
+│   ├── main.py                  # FastAPI — endpoints + CORS + MCP mount
+│   ├── photo_assessment.py      # Azure AI Vision + GPT-4o pipeline
+│   ├── export_sop.py            # Mission Plan .docx generator
+│   └── export_assessment.py     # Field Assessment .docx report
+├── data/
+│   ├── schema.sql               # SQLite schema (9 tables)
+│   ├── db.py                    # Async database module
+│   ├── opsplan.db               # Pre-loaded SVI/NRI/Census data
+│   └── loaders/                 # Data loading scripts
+├── Dockerfile                   # Container build
+├── deploy.ps1                   # Azure deployment script (PowerShell)
+├── requirements.txt             # Python dependencies
+└── staticwebapp.config.json     # SWA auth + routing config
 ```
 
 ---
 
-## Quick Start
+## Quick Start (Local Development)
 
 ### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- Azure OpenAI resource with GPT-4o deployment
+- Census API key (free: https://api.census.gov/data/key_signup.html)
 
-- **Python 3.11+** — https://python.org (check "Add to PATH" during install)
-- **Node.js 18+** — https://nodejs.org (LTS version)
-- **Azure OpenAI** — An Azure OpenAI resource with a GPT-4o deployment
-- **Census API key** (free) — https://api.census.gov/data/key_signup.html
-
-### 1. Clone / extract the project
+### Setup
 
 ```bash
-cd your-projects-folder
-unzip opsplan-project.zip
 cd opsplan
-```
 
-### 2. Backend setup
-
-```bash
-# Create virtual environment
+# Backend
 python -m venv .venv
-
-# Activate it
-# Windows:
-.venv\Scripts\activate
-# Mac/Linux:
-source .venv/bin/activate
-
-# Install Python packages
+.venv\Scripts\activate          # Windows
 pip install -r requirements.txt
-```
 
-### 3. Configure environment
-
-```bash
-# Windows:
+# Configure
 copy config\.env.example config\.env
-# Mac/Linux:
-cp config/.env.example config/.env
-```
+# Edit config\.env with your Azure OpenAI endpoint, key, and Census API key
 
-Open `config/.env` in any text editor and fill in:
-
-```
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
-AZURE_OPENAI_API_KEY=your-key-here
-AZURE_OPENAI_DEPLOYMENT=gpt-4o
-CENSUS_API_KEY=your-census-key-here
-```
-
-The Azure OpenAI values come from Azure Portal → your OpenAI resource → "Keys and Endpoint."
-
-### 4. Initialize database and load data
-
-```bash
-# Create the SQLite database
+# Initialize database
 python scripts/setup_db.py
-
-# Load materials reference data (instant, no download)
 python -m data.loaders.load_materials
-```
-
-Then download and load the open-source datasets:
-
-```bash
-# SVI — download CSV from:
-#   https://www.atsdr.cdc.gov/place-health/php/svi/svi-data-documentation-download.html
-#   Select: 2022 → United States → CSV
-#   Move file to: data/SVI_2022_US.csv
 python -m data.loaders.load_svi data/SVI_2022_US.csv --state 48
-
-# NRI — download CSV from:
-#   https://hazards.fema.gov/nri/data-resources
-#   Click: Census Tracts → CSV
-#   Move file to: data/NRI_Table_CensusTracts.csv
 python -m data.loaders.load_nri data/NRI_Table_CensusTracts.csv --state Texas
-
-# Census ACS — fetches from API, no download needed
 python -m data.loaders.load_census --state 48 --counties 007,391,057,469,409
-```
 
-The `--state 48` and `--state Texas` flags filter to Texas only so you don't have to load the entire US. The county codes are: Aransas (007), Refugio (391), Calhoun (057), Victoria (469), San Patricio (409).
-
-### 5. Start the backend
-
-```bash
+# Start backend
 uvicorn api.main:app --reload
-```
 
-Verify it works: open http://localhost:8000/health — you should see `{"status":"ok","version":"0.1.0"}`.
-
-### 6. Frontend setup (new terminal)
-
-Open a **second** terminal window, navigate to the project, then:
-
-```bash
-cd opsplan/frontend
+# Frontend (new terminal)
+cd frontend
 npm install
 npm run dev
 ```
 
-This starts the React dev server. Open http://localhost:5173 in your browser — you'll see the OpsPlan app.
+Open http://localhost:5173
 
-The Vite dev server automatically proxies any `/api/*` requests to your backend at `localhost:8000`, so the frontend and backend work together seamlessly.
+### Environment Variables
 
-### 7. Use the app
-
-1. **Step 1 — Define Event:** Click "Pre-fill from Alert" to load Hurricane Harvey data, then click "Run Disaster Context Agent."
-2. **Step 2 — Priority Analysis:** Review the ranked zones, click rows to see details. Click "Approve Rankings."
-3. **Step 3 — Construction Profiles:** Switch between zones and data tabs. Click "Approve Profiles."
-4. **Step 4 — Mission Plan:** Browse all 5 SOP sections. Click "Export .docx" to download.
-5. **Chat:** Toggle the Agent Chat drawer from the header at any step.
-
-The app currently runs in **demo mode** with pre-loaded Harvey data. Once the backend agents are connected to your Azure OpenAI deployment and the database is loaded, it will use real agent responses.
-
----
-
-## Data Sources
-
-| Dataset | Source | Size | What It Provides |
-|---------|--------|------|-----------------|
-| CDC SVI 2022 | CDC/ATSDR | ~85 MB | Social vulnerability scores by census tract |
-| FEMA NRI | FEMA | ~180 MB | Natural hazard risk scores by census tract |
-| Census ACS 5-Year | Census API | API call | Housing types, demographics, financials by tract |
-| Materials Reference | Built-in | Instant | Building materials + costs by type/era/region |
+```
+AZURE_OPENAI_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
+AZURE_OPENAI_API_KEY=your-key
+AZURE_OPENAI_DEPLOYMENT=gpt-4o
+AZURE_OPENAI_API_VERSION=2025-01-01-preview
+AZURE_VISION_ENDPOINT=https://your-vision.cognitiveservices.azure.com/
+AZURE_VISION_API_KEY=your-key
+CENSUS_API_KEY=your-census-key
+```
 
 ---
 
-## Azure Services
+## Production Deployment
 
-| Service | Purpose | Required For |
-|---------|---------|-------------|
-| Azure OpenAI (GPT-4o) | Powers all 3 agents | Core pipeline |
-| Azure AI Vision | Mobile photo damage assessment | Part 2 |
-| Azure Blob Storage | Photo storage | Part 2 |
-| Azure Communication Services | SMS/email alerts | Weather Sentinel |
-| Microsoft Entra ID | Authentication | Production |
+### Backend → Azure Container Apps
 
-For the hackathon demo, only Azure OpenAI is required.
+```powershell
+az login
+az acr build --registry opsplanacr905 --image opsplan:latest --file Dockerfile .
+az containerapp update --name opsplan-api --resource-group rg-opsplan --image opsplanacr905.azurecr.io/opsplan:latest
+```
+
+### Frontend → Azure Static Web Apps
+
+```powershell
+cd frontend
+npm run build
+swa deploy ./dist --env production --app-name opsplan
+```
 
 ---
 
@@ -217,14 +214,33 @@ For the hackathon demo, only Azure OpenAI is required.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Health check |
-| POST | `/api/events/analyze` | Run Disaster Context Agent |
+| GET | `/health` | Health check + version |
+| GET | `/api/config/models` | Model Router + MCP Server config |
+| GET | `/api/mcp/tools` | MCP tool listing (REST fallback) |
+| POST | `/api/events/analyze` | Run Priority Analysis Agent |
 | POST | `/api/profiles/build` | Run Construction Profile Agent |
 | POST | `/api/plan/generate` | Run Mission Planning Agent |
-| POST | `/api/chat/{agent_name}` | Side-drawer agent chat |
+| POST | `/api/chat/{agent}` | Agent chat with context injection |
+| POST | `/api/export/plan` | Export Mission Plan as .docx |
+| POST | `/api/assess/photo` | Analyze single photo (Vision + GPT-4o) |
+| POST | `/api/assess/photos` | Analyze multiple photos + merge |
+| POST | `/api/assess/save` | Save field assessment to database |
+| POST | `/api/assess/report` | Export assessment report as .docx |
+| GET | `/api/assess/history/{fips}` | Get assessment history for a zone |
+
+---
+
+## Data Sources
+
+| Dataset | Source | Records |
+|---------|--------|---------|
+| CDC SVI 2022 | CDC/ATSDR | 6,884 TX tracts |
+| FEMA NRI | FEMA Hazards | 6,883 TX tracts |
+| Census ACS 5-Year | Census API | Harvey impact area |
+| Materials Reference | Built-in | Static reference |
 
 ---
 
 ## Team
 
-**THYNK UNLIMITED** — Team Rubicon Hackathon
+**THYNK UNLIMITED** — Team Rubicon × Microsoft Azure AI Hackathon

@@ -87,7 +87,7 @@ Return a JSON array of profiles. Each profile must have this structure:
       "framing": "Wood frame",
       "window_type": "Single-pane (est. for pre-1980)",
       "roof_deck": "Standard (6d nails)",
-      "roof_wall": "Toe-nail (est. for pre-code)"
+      "roof_wall": "Toe-nail 58%, Hurricane clip 28%, Strap/bolt 14% (per FL/TX building dept surveys)"
     },
     "site": {
       "flood_zone_VE": 5,

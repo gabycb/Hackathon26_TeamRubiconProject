@@ -1,8 +1,8 @@
 """
 Base agent class for OpsPlan Semantic Kernel agents.
 
-All three agents (Disaster Context, Construction Profile, Mission Planning)
-inherit from this base. It handles:
+All agents inherit from this base. It handles:
+- Model Router integration (per-agent model assignment)
 - Semantic Kernel kernel initialization with Azure OpenAI
 - Chat completion with automatic function calling
 - Structured output parsing
@@ -21,6 +21,7 @@ from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoic
 from semantic_kernel.contents import ChatHistory
 
 from config.settings import settings
+from config.model_router import model_router
 
 logger = structlog.get_logger()
 
@@ -29,24 +30,24 @@ class BaseAgent:
     """
     Base class for all OpsPlan agents.
 
-    Subclasses must implement:
-        - agent_name: str property
-        - system_prompt: str property
-        - register_skills(): registers native function plugins
-
-    The run() method uses Semantic Kernel's chat completion service
-    with automatic function calling — the LLM calls registered skills
-    in a loop until it has enough data to produce a final response.
+    Uses the Model Router to assign the appropriate Azure OpenAI deployment
+    per agent. This enables cost/latency optimization:
+    - Scoring/retrieval agents → gpt-4o-mini (faster, cheaper)
+    - Generation agents → gpt-4o (higher capability)
+    - Vision agents → gpt-4o (vision required)
     """
 
     def __init__(self):
         self.kernel = Kernel()
-        self._service_id = "azure-gpt4o"
+        self._service_id = f"azure-{self.agent_name}"
+        self._model_config = model_router.get_config(self.agent_name)
         self._setup_ai_service()
         self.history = ChatHistory()
         self.history.add_system_message(self.system_prompt)
         self.register_skills()
-        logger.info("agent.initialized", agent=self.agent_name)
+        logger.info("agent.initialized", agent=self.agent_name,
+                     deployment=self._model_config.deployment_name,
+                     reason=self._model_config.reason)
 
     @property
     def agent_name(self) -> str:
@@ -60,12 +61,13 @@ class BaseAgent:
         raise NotImplementedError
 
     def _setup_ai_service(self) -> None:
-        """Configure Azure OpenAI as the chat completion service."""
+        """Configure Azure OpenAI via Model Router — each agent gets its assigned deployment."""
+        cfg = self._model_config
         service = AzureChatCompletion(
-            deployment_name=settings.azure_openai.deployment_name,
-            endpoint=settings.azure_openai.endpoint,
-            api_key=settings.azure_openai.api_key,
-            api_version=settings.azure_openai.api_version,
+            deployment_name=cfg.deployment_name,
+            endpoint=cfg.endpoint,
+            api_key=cfg.api_key,
+            api_version=cfg.api_version,
             service_id=self._service_id,
         )
         self.kernel.add_service(service)
@@ -157,30 +159,22 @@ class BaseAgent:
 
         # Direct JSON parse
         try:
-            parsed = json.loads(clean)
-            # If it's a list, wrap it so callers always get a dict
-            if isinstance(parsed, list):
-                return {"profiles": parsed}
-            return parsed
+            return json.loads(clean)
         except json.JSONDecodeError:
             pass
 
-        # Find first JSON object or array in text
+        # Find first JSON object in text
         for i, ch in enumerate(clean):
-            if ch in ("{", "["):
-                close = "}" if ch == "{" else "]"
+            if ch == "{":
                 depth = 0
                 for j in range(i, len(clean)):
-                    if clean[j] == ch:
+                    if clean[j] == "{":
                         depth += 1
-                    elif clean[j] == close:
+                    elif clean[j] == "}":
                         depth -= 1
                     if depth == 0:
                         try:
-                            parsed = json.loads(clean[i : j + 1])
-                            if isinstance(parsed, list):
-                                return {"profiles": parsed}
-                            return parsed
+                            return json.loads(clean[i : j + 1])
                         except json.JSONDecodeError:
                             break
                 break

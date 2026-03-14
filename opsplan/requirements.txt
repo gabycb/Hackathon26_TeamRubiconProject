@@ -1,36 +1,42 @@
-# Core
+# =============================================================
+# OpsPlan — Python Dependencies
+# =============================================================
+
+# --- Core AI / Agent Framework ---
 semantic-kernel>=1.0.0
 openai>=1.12.0
-python-dotenv>=1.0.0
 
-# API
+# --- API Framework ---
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
+gunicorn>=21.2.0
 pydantic>=2.5.0
 
-# Data
-aiohttp>=3.9.0
+# --- Database ---
 aiosqlite>=0.19.0
+
+# --- HTTP / Networking ---
+aiohttp>=3.9.0
+httpx>=0.26.0
+
+# --- Data Processing ---
 pandas>=2.1.0
 
-# Document generation
+# --- Image Processing (Part 2 photo resize) ---
+Pillow>=10.2.0
+
+# --- Configuration ---
+python-dotenv>=1.0.0
+
+# --- Logging ---
+structlog>=23.2.0
+
+# --- Document Generation ---
 python-docx>=1.1.0
 
-# Azure services
+# --- Azure Services ---
 azure-identity>=1.15.0
-azure-storage-blob>=12.19.0
-azure-communication-sms>=1.1.0
-azure-communication-email>=1.0.0
-azure-ai-vision-imageanalysis>=1.0.0
 
-# Geospatial
-shapely>=2.0.0
-pyproj>=3.6.0
-
-# Testing
+# --- Testing ---
 pytest>=7.4.0
 pytest-asyncio>=0.23.0
-
-# Utilities
-httpx>=0.26.0
-structlog>=23.2.0
