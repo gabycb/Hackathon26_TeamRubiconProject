@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 
 // Mobile detection hook
@@ -229,7 +229,7 @@ const WizardSteps = ({ current, onNav }) => {
 // ============================================================
 // CHAT DRAWER
 // ============================================================
-const ChatDrawer = ({ messages, onSend, agentName, isMobile, onClose }) => {
+const ChatDrawer = ({ messages, onSend, agentName, isMobile, onClose, contextLabel }) => {
   const [input, setInput] = useState("");
   const endRef = useRef(null);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
@@ -250,7 +250,7 @@ const ChatDrawer = ({ messages, onSend, agentName, isMobile, onClose }) => {
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: font }}>Agent Chat</div>
             <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>Talking to: {agentName || "Priority Analysis Agent"}</div>
-            <div style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>Context: {[step1Data && "Event", step2Data && "Zones+Profiles", step3Data && "Mission Plan"].filter(Boolean).join(" → ") || "None yet"}</div>
+            <div style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>Context: {contextLabel || "None yet"}</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: C.textMuted, padding: 4 }}>✕</button>
         </div>
@@ -1322,6 +1322,30 @@ const Step4 = ({ data, step1Data, onNewAlert, onReturnToStart, onAction }) => {
 // ============================================================
 // MAIN APP
 // ============================================================
+// Error Boundary — prevents white screen crashes
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, info) { console.error('OpsPlan error:', error, info); }
+  render() {
+    if (this.state.hasError) {
+      return React.createElement('div', { style: { padding: 40, textAlign: 'center', fontFamily: 'Segoe UI, sans-serif' } },
+        React.createElement('h2', { style: { color: '#B85C1F' } }, 'Something went wrong'),
+        React.createElement('p', { style: { color: '#6B5E52', fontSize: 13 } }, String(this.state.error?.message || 'Unknown error')),
+        React.createElement('button', {
+          onClick: () => { this.setState({ hasError: false, error: null }); },
+          style: { padding: '8px 20px', borderRadius: 6, border: 'none', background: '#B85C1F', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, marginTop: 12 }
+        }, 'Try Again'),
+        React.createElement('button', {
+          onClick: () => window.location.reload(),
+          style: { padding: '8px 20px', borderRadius: 6, border: '1px solid #E2DCD2', background: '#fff', color: '#6B5E52', cursor: 'pointer', fontSize: 13, fontWeight: 600, marginTop: 12, marginLeft: 8 }
+        }, 'Reload Page')
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const isMobile = useIsMobile();
   const [appMode, setAppMode] = useState("planner");
@@ -1329,15 +1353,6 @@ export default function App() {
   const [mode, setMode] = useState("planning"); // planning | assessment
   const [chatOpen, setChatOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // Warn user if they try to leave during agent processing
-  useEffect(() => {
-    const handler = (e) => {
-      if (loading) { e.preventDefault(); e.returnValue = "An agent is still processing. Are you sure you want to leave?"; }
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [loading]);
   const [eventLabel, setEventLabel] = useState(null);
 
   // Data passed between steps
@@ -1345,19 +1360,19 @@ export default function App() {
   const [step2Data, setStep2Data] = useState(null);
   const [step3Data, setStep3Data] = useState(null);
 
-  // Warn before leaving if agents have run
-  useEffect(() => {
-    const handler = (e) => {
-      if (step1Data) { e.preventDefault(); e.returnValue = ""; }
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [step1Data]);
-
   // Chat messages
   const [messages, setMessages] = useState([
     { role: "agent", text: "I'm the Disaster Context Agent. Describe an event or enter a FEMA declaration number, and I'll analyze the affected area for priority zones." },
   ]);
+
+  // Warn before leaving if data exists or agent is processing
+  useEffect(() => {
+    const handler = (e) => {
+      if (step1Data || loading) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [step1Data, loading]);
 
   const agentNames = ["Priority Analysis Agent", "Priority Analysis Agent", "Construction Profile Agent", "Mission Planning Agent"];
 
@@ -1391,6 +1406,7 @@ export default function App() {
   };
 
   return (
+    <ErrorBoundary>
     <div style={{ background: "#EDE8E0", minHeight: "100vh", fontFamily: font }}>
       <TopBar event={eventLabel} chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} mode={appMode} onModeSwitch={() => setAppMode(appMode === "planner" ? "field" : "planner")} />
       {appMode === "planner" && <WizardSteps current={step} onNav={setStep} />}
@@ -1413,8 +1429,9 @@ export default function App() {
         </div>
 
         {/* Chat drawer */}
-        {chatOpen && <ChatDrawer messages={messages} onSend={handleChat} agentName={agentNames[step]} isMobile={isMobile} onClose={() => setChatOpen(false)} />}
+        {chatOpen && <ChatDrawer messages={messages} onSend={handleChat} agentName={agentNames[step]} isMobile={isMobile} onClose={() => setChatOpen(false)} contextLabel={[step1Data && "Event", step2Data && "Zones+Profiles", step3Data && "Mission Plan"].filter(Boolean).join(" → ")} />}
       </div>
     </div>
+  </ErrorBoundary>
   );
 }
