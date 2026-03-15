@@ -109,7 +109,8 @@ exec_settings.function_choice_behavior = FunctionChoiceBehavior.Auto(
 **Code quality:** consistent module structure, docstrings on every class and function, typed parameters, explicit error handling with logged failures, no magic numbers in scoring logic. <br>
 
 
-<img src="images/front_end_diagram.png" alt="" width="50%"> 
+<img src="images/front_end_diagram.png" alt="" width="50%"> <br>
+
 ---
 
 ### 2. Agentic Design
