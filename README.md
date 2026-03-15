@@ -5,19 +5,19 @@
 ## Hackathon Info
 **Team:** Leo, Gaby, Travis & Jethro <br>
 **Hackathon:** Microsoft AI Dev Days Hackathon <br>
-**Live Demo:** https://nice-coast-0b3959d1e.1.azurestaticapps.net/  <br>
+**Live Demo:** [DROP Demo Site](https://nice-coast-0b3959d1e.1.azurestaticapps.net/)  <br>
 **Stack:** Python · FastAPI · Semantic Kernel · Azure OpenAI (GPT-4o) · React · Vite · Azure Static Web Apps 
 
 ---
 
 ## What is DROP?
-DROP is our submission for the Microsoft dev hackathon. It includes a multi-agent system and Azure services to help disaster responders plan. Based on information from Team Rubicon, a nonprofit dedicated to disaster response and recovery, we built a system to reduce their time spent doing manual tasks when deciding which personnel and resources are necessary in a disaster response.
+**DROP** is our submission for the *Microsoft dev hackathon*. It includes a multi-agent system and Azure services to help disaster responders plan. Based on information from [Team Rubicon](https://teamrubiconusa.org/), a nonprofit dedicated to disaster response and recovery, we built a system to reduce their time spent doing manual tasks when deciding which personnel and resources are necessary in a disaster response.
 
-DROP automates disaster response mission planning for Team Rubicon operators. A mission planner describes a disaster event — or pastes a FEMA declaration — and DROP's multi-agent AI pipeline produces a complete, field-ready plan in minutes. DROP was built using Azure services including Azure OpenAI, and it accomplishes our mission to automate and improve disaster response operations for real impact by working with Team Rubicon (TR).
+DROP automates disaster response mission planning for Team Rubicon operators. A mission planner describes a disaster event — or pastes a FEMA declaration — and DROP's multi-agent AI pipeline produces a complete, field-ready plan **in minutes**. DROP was built using Azure services including Azure OpenAI, and it accomplishes our mission to automate and improve disaster response operations for real impact by working with Team Rubicon (TR).
 
 **Without DROP:** operators manually cross-reference open-source data, including social vulnerability index (SVI) per location, national risk index (NRI) tables, Census housing data, and Hazus building stock reports to prioritize zones, then hand-author a 5-paragraph operation plan (known as Standard Operating Procedure or SOP).
 
-**With DROP:** that same workflow takes 3 clicks and produces a structured, exportable operationa plan (SOP) with ranked priority zones, structural profiles, phased timelines, and resource allocations. The second version of DROP includes field assessment piepelines to provide real-time data and image detection for classification.
+**With DROP:** that same workflow takes a few clicks and produces a structured, exportable operations plan (SOP) with ranked priority zones, structural profiles, phased timelines, and resource allocations. The second version of DROP includes field assessment piepelines to provide real-time data and image detection for classification.
 
 ---
 
@@ -66,7 +66,7 @@ Zone Selection - based on Priority Analysis Agent output
                ▼
 ┌──────────────────────────────┐
 │        Annotate & Submit     │  ← add notes, upload to mission database, add to report
-└──────────────┬───────────────┘
+└──────────────────────────────┘
 ```
 ---
 
@@ -139,14 +139,14 @@ These aren't mock datasets. The Hurricane Harvey demo uses real FIPS tracts for 
 - Database initialization scripted (`scripts/setup_db.py`) with data loaders for each source
 - `.docx` Operation Plan export ready to hand to a field commander
 - Async database layer, structured logging, and health endpoint (`GET /health`) are production patterns
-
+- Azure services: Azure OpenAI, Azure AI Vision 4.0, Azure Container Registry (see full list [here](https://github.com/gabycb/Hackathon26_TeamRubiconProject/blob/main/opsplan/README.md#azure-services-used))
 **Extensibility:** the `services/` directory scaffolds Weather Sentinel integration, authentication, and push notifications as named next steps — not afterthoughts.
 
 ---
 
 ### 4. User Experience
 
-**Wizard-based workflow** maps directly to how disaster response operators think: define the event → review zone rankings → review construction profiles → review and export the plan. The 4-step progression mirrors the actual planning sequence, so the UI itself teaches the process.
+**Wizard-based workflow** maps directly to how disaster response operators think: define the event → review zone rankings → review construction profiles → review and export the plan. The 4-step progression mirrors the actual planning sequence, so the UI itself teaches the process. It's just as easy to upload field photos with images and get real-time damage assessments, all consolidated and used to update the planning requirements.
 
 **Human approval gates** are a deliberate UX feature, not a limitation. In emergency response, operators need to be able to catch and correct AI errors before they propagate downstream. Each gate shows the agent's full output before advancing.
 
@@ -180,128 +180,59 @@ The system is not a generic disaster tool repurposed for the hackathon. It is bu
 ## Project Structure
 
 ```
-opsplan/
-├── frontend/                # React + Vite UI
-│   ├── src/
-│   │   ├── App.jsx          # 4-step wizard app
-│   │   └── main.jsx
-│   ├── vite.config.js       # Dev server + API proxy
-│   └── package.json
-├── agents/                  # Semantic Kernel agents
-│   ├── base_agent.py        # Shared base: SK kernel, tool loop, history, output parsing
-│   ├── disaster_context/    # Agent 1: zone prioritization
-│   ├── construction_profile/# Agent 2: structural profiles
-│   └── mission_planning/    # Agent 3: SOP generation
-├── skills/                  # SK native function plugins
-│   ├── svi_lookup.py        # CDC SVI queries
-│   ├── nri_lookup.py        # FEMA NRI queries
-│   ├── priority_scoring.py  # Weighted composite scoring
-│   ├── housing_stock.py     # Hazus building stock
-│   ├── material_profile.py  # Building materials by type/era/region
-│   ├── resource_allocation.py
-│   ├── timeline_generator.py
-│   └── sop_template.py      # SOP JSON validation
-├── api/
-│   └── main.py              # FastAPI endpoints + webhooks + lifespan
-├── data/
-│   ├── schema.sql           # SQLite schema (9 tables)
-│   ├── db.py                # Async database module
-│   └── loaders/             # SVI, NRI, Census, materials loaders
+ProjectReport.md                    # background research and full report on project
+images/                             # reference images + architecture diagram
+testcode/
+├── sample code/                    # used as reference when building with Github Copilot
+
+opsplan/                         # main code for application, later renamed DROP
+├── frontend/                    # React + Vite UI
+│   └── src/
+│       ├── App.jsx              # 4-step wizard + chat + mobile responsive
+│       └── FieldAssessment.jsx  # Part 2: 6-screen mobile assessment flow
+├── agents/                      # Semantic Kernel agents
+│   ├── base_agent.py            # Base class with Model Router integration
+│   ├── disaster_context/        # Agent 1: Priority Analysis
+│   ├── construction_profile/    # Agent 2: Construction Profiles
+│   └── mission_planning/        # Agent 3: Mission Plan generation
+├── skills/                      # SK native function plugins (12 tools)
+│   ├── svi_lookup.py            # CDC SVI queries
+│   ├── nri_lookup.py            # FEMA NRI queries
+│   ├── census_lookup.py         # Census ACS + vulnerability profiles
+│   ├── priority_scoring.py      # Deterministic composite scoring
+│   ├── resource_allocation.py   # Personnel/equipment calculator
+│   ├── timeline_generator.py    # Phased ops timeline
+│   └── ...
+├── services/
+│   └── mcp_server.py            # MCP Server — 8 tools via SSE transport
 ├── config/
-│   ├── settings.py
-│   └── .env.example
-├── services/                # Weather Sentinel, Auth, Notifications (scaffolded)
-└── tests/
+│   ├── settings.py              # Environment config loader
+│   └── model_router.py          # Per-agent model assignment
+├── api/
+│   ├── main.py                  # FastAPI — endpoints + CORS + MCP mount
+│   ├── photo_assessment.py      # Azure AI Vision + GPT-4o pipeline
+│   ├── export_sop.py            # Mission Plan .docx generator
+│   └── export_assessment.py     # Field Assessment .docx report
+├── data/
+│   ├── schema.sql               # SQLite schema (9 tables)
+│   ├── db.py                    # Async database module
+│   ├── opsplan.db               # Pre-loaded SVI/NRI/Census data
+│   └── loaders/                 # Data loading scripts
+├── Dockerfile                   # Container build
+├── deploy.ps1                   # Azure deployment script (PowerShell)
+├── requirements.txt             # Python dependencies
+└── staticwebapp.config.json     # SWA auth + routing config
 ```
 
 ---
 
 ## Quick Start
-
+Follow the OpsPlan Quick start [here](https://github.com/gabycb/Hackathon26_TeamRubiconProject/blob/main/opsplan/README.md#quick-start-local-development) to download and test in your environment. 
 ### Prerequisites
-
 - Python 3.11+
 - Node.js 18+
 - Azure OpenAI resource with a GPT-4o deployment
 - Census API key (free) — https://api.census.gov/data/key_signup.html
-
-### Backend
-
-```bash
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-
-cp config/.env.example config/.env  # then fill in Azure + Census keys
-
-python scripts/setup_db.py
-python -m data.loaders.load_materials
-
-# Download SVI CSV from https://www.atsdr.cdc.gov/place-health/php/svi/svi-data-documentation-download.html
-# (2022 → United States → CSV) → save as data/SVI_2022_US.csv
-python -m data.loaders.load_svi data/SVI_2022_US.csv --state 48
-
-# Download NRI CSV from https://hazards.fema.gov/nri/data-resources
-# (Census Tracts → CSV) → save as data/NRI_Table_CensusTracts.csv
-python -m data.loaders.load_nri data/NRI_Table_CensusTracts.csv --state Texas
-
-python -m data.loaders.load_census --state 48 --counties 007,391,057,469,409
-
-uvicorn api.main:app --reload
-# Health check: http://localhost:8000/health
-```
-
-### Frontend
-
-```bash
-cd opsplan/frontend
-npm install
-npm run dev
-# Open http://localhost:5173
-```
-
-### Using the App
-
-1. **Step 1 — Define Event:** click "Pre-fill from Alert" to load Hurricane Harvey, then "Run Disaster Context Agent"
-2. **Step 2 — Priority Analysis:** review ranked zones → "Approve Rankings"
-3. **Step 3 — Construction Profiles:** review structural data per zone → "Approve Profiles"
-4. **Step 4 — Mission Plan:** review all 5 operation plan sections → "Export .docx"
-5. **Agent Chat:** available from the header at any step
-
----
-
-## Data Sources
-
-| Dataset | Source | What It Provides |
-|---------|--------|-----------------|
-| CDC SVI 2022 | CDC/ATSDR | Social vulnerability scores by census tract |
-| FEMA NRI | FEMA | Natural hazard risk scores + expected annual loss |
-| Census ACS 5-Year | Census API | Housing types, demographics, financials |
-| Materials Reference | Built-in | Building materials + costs by type/era/region |
-
-## Azure Services
-
-| Service | Purpose |
-|---------|---------|
-| Azure OpenAI (GPT-4o) | Powers all 3 agents — required |
-| Azure Static Web Apps | Frontend hosting |
-| Azure Communication Services | Inbound SMS webhook |
-| Microsoft Graph | Inbound email notifications |
-| Microsoft Entra ID | Authentication (production) |
-
-## API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| POST | `/api/events/analyze` | Run Disaster Context Agent |
-| POST | `/api/profiles/build` | Run Construction Profile Agent |
-| POST | `/api/plan/generate` | Run Mission Planning Agent |
-| POST | `/api/chat/{agent_name}` | Side-drawer agent chat |
-| POST | `/api/export/sop` | Export SOP as .docx |
-| POST | `/api/webhooks/acs/sms` | ACS SMS inbound webhook |
-| POST | `/api/webhooks/graph/email` | Graph email notification webhook |
-| GET | `/api/inbound/messages` | List inbound field messages |
 
 ---
 
