@@ -108,7 +108,7 @@ exec_settings.function_choice_behavior = FunctionChoiceBehavior.Auto(
 
 **Code quality:** consistent module structure, docstrings on every class and function, typed parameters, explicit error handling with logged failures, no magic numbers in scoring logic.
 ---
-<img src="images/front_end_diagram.png" alt="" height="50%"> 
+<img src="images/front_end_diagram.png" alt="" width="50%"> 
 
 
 ### 2. Agentic Design
@@ -126,6 +126,7 @@ OpsPlan implements a **sequential multi-agent pipeline with human-in-the-loop ga
 **Inbound communications pipeline:** the API includes webhook endpoints for ACS SMS and Microsoft Graph email, with idempotent ingestion, auto-parsing of field assessments, and subscription lifecycle renewal — laying groundwork for real-time field operator reporting back into the planning system.
 
 ---
+
 
 ### 3. Real-World Impact & Applicability 
 
