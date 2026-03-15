@@ -69,7 +69,8 @@ Zone Selection - based on Priority Analysis Agent output
 └──────────────────────────────┘
 ```
 ---
-During a disaster, things change quickly. Even unverified information, like a citizen reporting a downed power line, will help in planning to respond. This feature of field assessments, integrated with the multi-agent pipeline, allows for real-time updates. One consolidated app for the latest info and getting to a plan. 
+During a disaster, things change quickly. Even unverified information, like a citizen reporting a downed power line, will help in planning to respond. This feature of field assessments, integrated with the multi-agent pipeline, allows for real-time updates. 
+**DROP** is a consolidated resource for the latest info and getting to a plan. 
 
 ## Project Overview
 
