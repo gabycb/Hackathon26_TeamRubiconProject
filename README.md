@@ -78,7 +78,8 @@ During a disaster, things change quickly. Even unverified information, like a ci
 
 DROP is built on production-grade, well-structured code throughout.
 
-**Semantic Kernel agent architecture** — All agents inherit from a shared `BaseAgent` class that handles kernel initialization, Azure OpenAI wiring, automatic function-calling loops, structured JSON output parsing, and conversation history management. Subclasses only implement `agent_name`, `system_prompt`, and `register_skills()`.
+**Semantic Kernel agent architecture** — Semantic Kernel serves as the foundational orchestration layer, it connects the FastAPI backend to Azure OpenAI, manages prompt execution, and handles the plugin/function-calling pipeline.
+On top of that, DROP has a multi-agent architecture with specialized agents (for example the Priority Analysis Agent, and others powering the mission planning wizard steps and the field assessment photo analysis). All agents inherit from a shared BaseAgent class that handles kernel initialization, Azure OpenAI wiring, automatic function-calling loops, structured JSON output parsing, and conversation history management. Subclasses only implement agent_name, system_prompt, and register_skills().
 
 ```python
 # SK's auto function-calling loop — the LLM calls tools until it has enough data
