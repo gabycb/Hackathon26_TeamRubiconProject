@@ -42,7 +42,7 @@ Disaster Strikes - Event Trigger / FEMA Declaration
 └──────────────────────────────┘
 ```
 
-Each agent step has a **human approval gate** before the pipeline advances. A **side-drawer chat** lets operators ask questions or request adjustments at any step — agents still have full tool access during chat.
+Each agent step has a **human approval gate** before the pipeline advances. A **side-drawer chat** lets operators ask questions or request adjustments at any step — operators can interact and update their plans assisted by memory-persistent agents, all with natural language in this chat.
 
 ## Field Assessment for real-time updates
 ```
