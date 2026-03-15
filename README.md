@@ -17,7 +17,7 @@ DROP automates disaster response mission planning for Team Rubicon operators. A 
 
 **Without DROP:** operators manually cross-reference open-source data, including social vulnerability index (SVI) per location, national risk index (NRI) tables, Census housing data, and Hazus building stock reports to prioritize zones, then hand-author a 5-paragraph operation plan (known as Standard Operating Procedure or SOP).
 
-**With DROP:** that same workflow takes a few clicks and produces a structured, exportable operations plan (SOP) with ranked priority zones, structural profiles, phased timelines, and resource allocations. The second version of DROP includes field assessment piepelines to provide real-time data and image detection for classification.
+**With DROP:** that same workflow takes a few clicks and produces a structured, exportable operations plan (SOP) with ranked priority zones, structural profiles, phased timelines, and resource allocations. The second version of DROP includes a field assessment pipeline to upload images to create real-time data and labels for damage classification.
 
 ---
 
