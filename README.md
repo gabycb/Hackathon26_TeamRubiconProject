@@ -127,7 +127,7 @@ OpsPlan implements a **sequential multi-agent pipeline with human-in-the-loop ga
 
 **Inbound communications pipeline:** the API includes webhook endpoints for ACS SMS and Microsoft Graph email, with idempotent ingestion, auto-parsing of field assessments, and subscription lifecycle renewal — laying groundwork for real-time field operator reporting back into the planning system.
 
-<img src="images/agent_overview.png" alt="" width="80%"> <br>
+<img src="images/agent_overview.png" alt=""> <br>
 
 ---
 
