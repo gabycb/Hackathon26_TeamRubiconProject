@@ -251,6 +251,6 @@ Follow the OpsPlan Quick start [here](https://github.com/gabycb/Hackathon26_Team
 [Architecture Diagram (PDF)](https://github.com/gabycb/Hackathon26_TeamRubiconProject/blob/main/images/architecture_diagram.pdf)
 
 ### Mermaid Diagram
-<img src="images/full-mermaid-diagram.png" alt="" width="80%"> <br>
+<img src="images/full-mermaid-diagram.png" alt=""> <br>
 
 **THYNK UNLIMITED** — Team Rubicon Hackathon
