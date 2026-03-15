@@ -1,7 +1,6 @@
 # OpsPlan — AI-Powered Disaster Response Mission Planning
 
-**Team:** THYNK UNLIMITED  
-**Hackathon:** Team Rubicon × Microsoft Azure AI  
+**Hackathon:** Microsoft Dev Days Hackathon  
 **Live Demo:** [https://nice-coast-0b3959d1e.1.azurestaticapps.net](https://nice-coast-0b3959d1e.1.azurestaticapps.net)
 
 ---
