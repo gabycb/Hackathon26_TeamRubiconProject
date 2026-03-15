@@ -11,7 +11,7 @@
 ---
 
 ## What is DROP?
-**DROP** is our submission for the *Microsoft dev hackathon*. It includes a multi-agent system and Azure services to help disaster responders plan. Based on information from [Team Rubicon](https://teamrubiconusa.org/), a nonprofit dedicated to disaster response and recovery, we built a system to reduce their time spent doing manual tasks when deciding which personnel and resources are necessary in a disaster response.
+**DROP** is our submission for the [Microsoft AI Dev Days hackathon](https://developer.microsoft.com/en-us/reactor/events/26647/). It includes a multi-agent system and Azure services to help disaster responders plan. Based on information from [Team Rubicon](https://teamrubiconusa.org/), a nonprofit dedicated to disaster response and recovery, we built a system to reduce their time spent doing manual tasks when deciding which personnel and resources are necessary in a disaster response.
 
 DROP automates disaster response mission planning for Team Rubicon operators. A mission planner describes a disaster event — or pastes a FEMA declaration — and DROP's multi-agent AI pipeline produces a complete, field-ready plan **in minutes**. DROP was built using Azure services including Azure OpenAI, and it accomplishes our mission to automate and improve disaster response operations for real impact by working with Team Rubicon (TR).
 
