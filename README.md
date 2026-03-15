@@ -107,8 +107,9 @@ exec_settings.function_choice_behavior = FunctionChoiceBehavior.Auto(
 **FastAPI backend** with lifespan management, async SQLite (9-table schema), structured logging via `structlog`, CORS middleware, and streaming `.docx` export.
 
 **Code quality:** consistent module structure, docstrings on every class and function, typed parameters, explicit error handling with logged failures, no magic numbers in scoring logic.
-
 ---
+<img src="images/front_end_diagram.png" alt="" height="50%"> 
+
 
 ### 2. Agentic Design
 
