@@ -11,28 +11,29 @@
 ---
 
 ## What is DROP?
+DROP is our submission for the Microsoft dev hackathon. It includes a multi-agent system and Azure services to help disaster responders plan. Based on information from Team Rubicon, a nonprofit dedicated to disaster response and recovery, we built a system to reduce their time spent doing manual tasks when deciding which personnel and resources are necessary in a disaster response.
 
-DROP automates disaster response mission planning for Team Rubicon operators. A commander describes a disaster event — or pastes a FEMA declaration — and DROP's three-agent AI pipeline produces a complete, field-ready Standard Operating Procedure in minutes. DROP was built specifically for the **Microsoft Dev Days Hackathon Challenge** and accomplishes our mission to automate and improve disaster response operations with input from a veteran-led humanitarian organization, Team Rubicon (TR).
+DROP automates disaster response mission planning for Team Rubicon operators. A mission planner describes a disaster event — or pastes a FEMA declaration — and DROP's multi-agent AI pipeline produces a complete, field-ready plan in minutes. DROP was built using Azure services including Azure OpenAI, and it accomplishes our mission to automate and improve disaster response operations for real impact by working with Team Rubicon (TR).
 
-**Without DROP:** operators manually cross-reference SVI data, NRI risk tables, Census housing data, and Hazus building stock reports to prioritize zones, then hand-author a 5-paragraph operation plan (known as SOP).
+**Without DROP:** operators manually cross-reference open-source data, including social vulnerability index (SVI) per location, national risk index (NRI) tables, Census housing data, and Hazus building stock reports to prioritize zones, then hand-author a 5-paragraph operation plan (known as Standard Operating Procedure or SOP).
 
-**With DROP:** that same workflow takes 3 clicks and produces a structured, exportable operationa plan (SOP) with ranked priority zones, structural profiles, phased timelines, and resource allocations.
+**With DROP:** that same workflow takes 3 clicks and produces a structured, exportable operationa plan (SOP) with ranked priority zones, structural profiles, phased timelines, and resource allocations. The second version of DROP includes field assessment piepelines to provide real-time data and image detection for classification.
 
 ---
 
-## The 3-Agent Pipeline
+## Mission Planning powered by AI
 
 ```
-[Event Description / FEMA Declaration]
+Disaster Strikes - Event Trigger / FEMA Declaration
           │
           ▼
 ┌─────────────────────────┐
-│  Disaster Context Agent │  ← Open source Data (SVI + NRI + Census) → ranked priority zones
+│ Priority Analysis Agent │  ← Open source Data (SVI + NRI + Census) → priority zones
 └─────────────┬───────────┘
               │  human approval gate
               ▼
 ┌──────────────────────────────┐
-│  Construction Profile Agent  │  + Analysis on FEMA Databases → structural profiles per zone
+│ Construction Profile Agent   │ + Analysis on FEMA Databases → structural profiles per zone
 └──────────────┬───────────────┘
                │  human approval gate
                ▼
@@ -43,6 +44,30 @@ DROP automates disaster response mission planning for Team Rubicon operators. A 
 
 Each agent step has a **human approval gate** before the pipeline advances. A **side-drawer chat** lets operators ask questions or request adjustments at any step — agents still have full tool access during chat.
 
+## Field Assessment for real-time updates
+```
+Zone Selection - based on Priority Analysis Agent output
+          │
+          ▼
+┌─────────────────────────┐
+│  Field Assessment Agent │  ← Photo upload
+└─────────────┬───────────┘
+              │  human approval gate
+              ▼
+┌──────────────────────────────┐
+│       Azure AI VIsion        │ + Scene detection, tags, OCR
+└──────────────┬───────────────┘
+               │  human approval gate
+               ▼
+┌──────────────────────────────┐
+│        Azure ML + GPT 4o     │  ← generates damage classification, tags + annotations
+└──────────────┬───────────────┘
+               │  human approval gate
+               ▼
+┌──────────────────────────────┐
+│        Annotate & Submit     │  ← add notes, upload to mission database, add to report
+└──────────────┬───────────────┘
+```
 ---
 
 ## Project Overview
@@ -51,7 +76,7 @@ Each agent step has a **human approval gate** before the pipeline advances. A **
 
 DROP is built on production-grade, well-structured code throughout.
 
-**Semantic Kernel agent architecture** — All three agents inherit from a shared `BaseAgent` class that handles kernel initialization, Azure OpenAI wiring, automatic function-calling loops, structured JSON output parsing, and conversation history management. Subclasses only implement `agent_name`, `system_prompt`, and `register_skills()`.
+**Semantic Kernel agent architecture** — All agents inherit from a shared `BaseAgent` class that handles kernel initialization, Azure OpenAI wiring, automatic function-calling loops, structured JSON output parsing, and conversation history management. Subclasses only implement `agent_name`, `system_prompt`, and `register_skills()`.
 
 ```python
 # SK's auto function-calling loop — the LLM calls tools until it has enough data
