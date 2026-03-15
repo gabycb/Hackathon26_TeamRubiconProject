@@ -3,13 +3,10 @@
 <img src="images/DROP_logo.png" alt="" width="30%" height="30%"> 
 
 ## Overview
-**Team:** Leo, Gaby, Travis & Jethro
-
-**Hackathon:** Microsoft AI Dev Days Hackathon
-
-**Live Demo:** https://nice-coast-0b3959d1e.1.azurestaticapps.net/  
-
-**Stack:** Python · FastAPI · Semantic Kernel · Azure OpenAI (GPT-4o) · React · Vite · Azure Static Web Apps
+**Team:** Leo, Gaby, Travis & Jethro <br>
+**Hackathon:** Microsoft AI Dev Days Hackathon <br>
+**Live Demo:** https://nice-coast-0b3959d1e.1.azurestaticapps.net/  <br>
+**Stack:** Python · FastAPI · Semantic Kernel · Azure OpenAI (GPT-4o) · React · Vite · Azure Static Web Apps 
 
 ---
 
