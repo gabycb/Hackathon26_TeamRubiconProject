@@ -2,7 +2,7 @@
 
 <img src="images/DROP_logo.png" alt="" width="30%" height="30%"> 
 
-## Overview
+## Hackathon Info
 **Team:** Leo, Gaby, Travis & Jethro <br>
 **Hackathon:** Microsoft AI Dev Days Hackathon <br>
 **Live Demo:** https://nice-coast-0b3959d1e.1.azurestaticapps.net/  <br>
@@ -10,7 +10,7 @@
 
 ---
 
-## What It Does
+## What is DROP?
 
 DROP automates disaster response mission planning for Team Rubicon operators. A commander describes a disaster event — or pastes a FEMA declaration — and DROP's three-agent AI pipeline produces a complete, field-ready Standard Operating Procedure in minutes. DROP was built specifically for the **Microsoft Dev Days Hackathon Challenge** and accomplishes our mission to automate and improve disaster response operations with input from a veteran-led humanitarian organization, Team Rubicon (TR).
 
