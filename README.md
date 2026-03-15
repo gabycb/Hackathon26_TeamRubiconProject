@@ -87,6 +87,7 @@ exec_settings.function_choice_behavior = FunctionChoiceBehavior.Auto(
     filters={"included_plugins": self._get_plugin_names()},
 )
 ```
+**Model Routing** - built in model router for per-agent model assignment, optimize costs and capacity constraints.
 
 **Native function plugin library** — 12 typed Semantic Kernel plugins expose real government datasets as LLM-callable tools:
 
@@ -100,6 +101,8 @@ exec_settings.function_choice_behavior = FunctionChoiceBehavior.Auto(
 | `ResourceAllocationSkill` | Rules engine | Personnel, equipment, and materials calc from zone/structure counts |
 | `TimelineGeneratorSkill` | Rules engine | Phased ops timeline with overlapping assessment/response phases |
 | `SOPTemplateSkill` | TR schema | Validates SOP JSON against 5-paragraph Team Rubicon format |
+
+**MCP Integration** - 8 tools available via Model Context Protocol (SSE transport + REST), easily configure additional MCP connections.<br>
 
 **FastAPI backend** with lifespan management, async SQLite (9-table schema), structured logging via `structlog`, CORS middleware, and streaming `.docx` export.
 
