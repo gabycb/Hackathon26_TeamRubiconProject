@@ -127,6 +127,8 @@ OpsPlan implements a **sequential multi-agent pipeline with human-in-the-loop ga
 
 **Inbound communications pipeline:** the API includes webhook endpoints for ACS SMS and Microsoft Graph email, with idempotent ingestion, auto-parsing of field assessments, and subscription lifecycle renewal — laying groundwork for real-time field operator reporting back into the planning system.
 
+<img src="images/agent_overview.png" alt="" width="50%"> <br>
+
 ---
 
 
@@ -244,5 +246,10 @@ Follow the OpsPlan Quick start [here](https://github.com/gabycb/Hackathon26_Team
 - Census API key (free) — https://api.census.gov/data/key_signup.html
 
 ---
+
+## Full Diagram
+[Architecture Diagram (PDF)](https://github.com/gabycb/Hackathon26_TeamRubiconProject/blob/main/images/architecture_diagram.pdf)
+
+<img src="images/full-mermaid-diagram.png" alt="" width="50%"> <br>
 
 **THYNK UNLIMITED** — Team Rubicon Hackathon
