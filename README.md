@@ -1,5 +1,5 @@
 # DROP — Disaster Response Operations Plan
-![](images/DROP_logo.png)
+<img src="images/DROP_logo.png" alt="" width="50%" height="50%">  
 
 **Team:** THYNK UNLIMITED  
 **Hackathon:** Team Rubicon  
