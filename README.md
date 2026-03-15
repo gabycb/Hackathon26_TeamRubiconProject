@@ -153,6 +153,7 @@ These aren't mock datasets. The Hurricane Harvey demo uses real FIPS tracts for 
 - `.docx` Operation Plan export ready to hand to a field commander
 - Async database layer, structured logging, and health endpoint (`GET /health`) are production patterns
 - Azure services: Azure OpenAI, Azure AI Vision 4.0, Azure Container Registry (see full list [here](https://github.com/gabycb/Hackathon26_TeamRubiconProject/blob/main/opsplan/README.md#azure-services-used)) <br>
+
 **Extensibility:** the `services/` directory scaffolds Weather Sentinel integration, authentication, and push notifications as named next steps — not afterthoughts.
 
 ---
