@@ -1,6 +1,6 @@
 # DROP — Disaster Response Operations Plan
 
-<img src="images/DROP_logo.png" alt="" width="30%" height="30%"> 
+<img src="images/drop_logo.png" alt="" width="30%" height="30%"> 
 
 ## Hackathon Info
 **Team:** Leo, Gaby, Travis & Jethro <br>
