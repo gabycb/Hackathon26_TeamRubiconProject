@@ -182,7 +182,7 @@ The system is not a generic disaster tool repurposed for the hackathon. It is bu
 
 ---
 
-## Project Structure
+## Structure of this REPO (with all hackathon requirements)
 
 ```
 ProjectReport.md                    # background research and full report on project
