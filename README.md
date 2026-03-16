@@ -6,7 +6,7 @@
 **Team:** Leo, Gaby, Travis & Jethro <br>
 **Hackathon:** Microsoft AI Dev Days Hackathon <br>
 **Live Demo Site:** [DROP Demo Site](https://nice-coast-0b3959d1e.1.azurestaticapps.net/)  <br>
-**Demo Video:** [Youtube Link](https://youtu.be/fxud_2mnaLk)
+**Demo Video:** [Youtube Link](https://youtu.be/fxud_2mnaLk) <br>
 **Stack:** Python · FastAPI · Semantic Kernel · Azure OpenAI (GPT-4o) · React · Vite · Azure Static Web Apps · Azure AI Vision
 
 ---
